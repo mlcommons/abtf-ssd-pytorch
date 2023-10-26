@@ -4,7 +4,8 @@
 import torch
 import torch.nn as nn
 from torchvision.models.resnet import resnet50
-from torchvision.models.mobilenet import mobilenet_v2, InvertedResidual
+from torchvision.models.mobilenet import mobilenet_v2
+from torchvision.models.mobilenetv2 import InvertedResidual
 
 class Base(nn.Module):
     def __init__(self):
