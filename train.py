@@ -15,7 +15,7 @@ from src.utils import generate_dboxes, Encoder, coco_classes
 from src.transform import SSDTransformer
 from src.loss import Loss
 from src.process import train, evaluate
-from src.dataset import collate_fn, CocoDataset
+from src.dataset import collate_fn, CocoDataset, Cognata
 
 
 def get_args():
@@ -43,6 +43,7 @@ def get_args():
     parser.add_argument('--local_rank', default=0, type=int,
                         help='Used for multi-process training. Can either be manually set ' +
                              'or automatically set by using \'python -m multiproc\'.')
+    parser.add_argument("--dataset", default='Cognata', type=str)
     args = parser.parse_args()
     return args
 
@@ -74,9 +75,14 @@ def main(opt):
     else:
         dboxes = generate_dboxes(model="ssdlite")
         model = SSDLite(backbone=MobileNetV2(), num_classes=len(coco_classes))
-    train_set = CocoDataset(opt.data_path, 2017, "train", SSDTransformer(dboxes, (300, 300), val=False))
+    if opt.dataset == 'Cognata':
+        folders = ['Cognata_Camera_01_4M']
+        train_set = Cognata(opt.data_path, folders, SSDTransformer(dboxes, (300, 300), val=False))
+        test_set = Cognata(opt.data_path, folders, SSDTransformer(dboxes, (300, 300), val=True))
+    elif opt.dataset == 'Coco':
+        train_set = CocoDataset(opt.data_path, 2017, "train", SSDTransformer(dboxes, (300, 300), val=False))
+        test_set = CocoDataset(opt.data_path, 2017, "val", SSDTransformer(dboxes, (300, 300), val=True))
     train_loader = DataLoader(train_set, **train_params)
-    test_set = CocoDataset(opt.data_path, 2017, "val", SSDTransformer(dboxes, (300, 300), val=True))
     test_loader = DataLoader(test_set, **test_params)
 
     encoder = Encoder(dboxes)
