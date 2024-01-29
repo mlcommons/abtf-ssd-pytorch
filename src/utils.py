@@ -178,24 +178,23 @@ class DefaultBoxes(object):
         self.steps = steps
         self.scales = scales
 
-        fk = fig_size / np.array(steps)
+        #fk = fig_size / np.array(steps)
         self.aspect_ratios = aspect_ratios
 
         self.default_boxes = []
         for idx, sfeat in enumerate(self.feat_size):
 
-            sk1 = scales[idx] / fig_size
-            sk2 = scales[idx + 1] / fig_size
+            sk1 = scales[idx]
+            sk2 = scales[idx + 1]
             sk3 = sqrt(sk1 * sk2)
-            all_sizes = [(sk1, sk1), (sk3, sk3)]
+            all_sizes = [(sk1/fig_size[1], sk1/fig_size[0]), (sk3/fig_size[1], sk3/fig_size[0])]
 
             for alpha in aspect_ratios[idx]:
-                w, h = sk1 * sqrt(alpha), sk1 / sqrt(alpha)
+                w, h = sk1 * sqrt(alpha)/fig_size[1], sk1 / (sqrt(alpha)*fig_size[0])
                 all_sizes.append((w, h))
-                all_sizes.append((h, w))
             for w, h in all_sizes:
-                for i, j in itertools.product(range(sfeat), repeat=2):
-                    cx, cy = (j + 0.5) / fk[idx], (i + 0.5) / fk[idx]
+                for i, j in itertools.product(range(sfeat[1]), range(sfeat[0])):
+                    cx, cy = (j + 0.5)*steps[idx] / fig_size[1], (i + 0.5)*steps[idx] / fig_size[0]
                     self.default_boxes.append((cx, cy, w, h))
 
         self.dboxes = torch.tensor(self.default_boxes, dtype=torch.float)
@@ -209,13 +208,13 @@ class DefaultBoxes(object):
             return self.dboxes
 
 
-def generate_dboxes(model="ssd"):
+def generate_dboxes(config, model="ssd"):
     if model == "ssd":
-        figsize = 300
-        feat_size = [38, 19, 10, 5, 3, 1]
-        steps = [8, 16, 32, 64, 100, 300]
-        scales = [21, 45, 99, 153, 207, 261, 315]
-        aspect_ratios = [[2], [2, 3], [2, 3], [2, 3], [2], [2]]
+        figsize = config['image_size']
+        feat_size = config['feat_size']
+        steps = config['steps']
+        scales = config['scales']
+        aspect_ratios = config['aspect_ratios']
         dboxes = DefaultBoxes(figsize, feat_size, steps, scales, aspect_ratios)
     else:  # "ssdlite"
         figsize = 300

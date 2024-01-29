@@ -16,6 +16,7 @@ from src.transform import SSDTransformer
 from src.loss import Loss
 from src.process import train, evaluate
 from src.dataset import collate_fn, CocoDataset, Cognata
+import config
 
 
 def get_args():
@@ -69,19 +70,20 @@ def main(opt):
                    "num_workers": opt.num_workers,
                    "collate_fn": collate_fn}
 
+    image_size = config.model['image_size']
     if opt.model == "ssd":
-        dboxes = generate_dboxes(model="ssd")
+        dboxes = generate_dboxes(config.model, model="ssd")
         model = SSD(backbone=ResNet(), num_classes=len(coco_classes))
     else:
         dboxes = generate_dboxes(model="ssdlite")
         model = SSDLite(backbone=MobileNetV2(), num_classes=len(coco_classes))
     if opt.dataset == 'Cognata':
         folders = ['Cognata_Camera_01_4M']
-        train_set = Cognata(opt.data_path, folders, SSDTransformer(dboxes, (300, 300), val=False))
-        test_set = Cognata(opt.data_path, folders, SSDTransformer(dboxes, (300, 300), val=True))
+        train_set = Cognata(opt.data_path, folders, SSDTransformer(dboxes, image_size, val=False))
+        test_set = Cognata(opt.data_path, folders, SSDTransformer(dboxes, image_size, val=True))
     elif opt.dataset == 'Coco':
-        train_set = CocoDataset(opt.data_path, 2017, "train", SSDTransformer(dboxes, (300, 300), val=False))
-        test_set = CocoDataset(opt.data_path, 2017, "val", SSDTransformer(dboxes, (300, 300), val=True))
+        train_set = CocoDataset(opt.data_path, 2017, "train", SSDTransformer(dboxes, image_size, val=False))
+        test_set = CocoDataset(opt.data_path, 2017, "val", SSDTransformer(dboxes, image_size, val=True))
     train_loader = DataLoader(train_set, **train_params)
     test_loader = DataLoader(test_set, **test_params)
 
