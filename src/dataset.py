@@ -72,10 +72,11 @@ class Cognata(Dataset):
             img_files += [os.path.join(img_folder, f) for f in os.listdir(img_folder) if os.path.isfile(os.path.join(img_folder, f))]
         self.transform = transform
         self.root = root
-        self.ann_files = ann_files
+        self.ann_files = sorted(ann_files)
         self.img_files = img_files
+        self.label_map = {}
+        self.label_info = {}
         self.object_labels()
-    
     def __len__(self):
         return len(self.img_files)
     
@@ -84,6 +85,7 @@ class Cognata(Dataset):
         width, height = img.size
         boxes = []
         labels = []
+        gt_boxes = []
         with open(self.ann_files[idx]) as f:
             reader = csv.reader(f)
             rows = list(reader)
@@ -94,20 +96,23 @@ class Cognata(Dataset):
             for annotation in annotations:
                 bbox = annotation[bbox_index]
                 bbox = ast.literal_eval(bbox)
-                bbox_width = bbox[2] - bbox[0]
-                bbox_height = bbox[3] - bbox[1]
-                coco_format = [bbox[0], bbox[1], bbox_width, bbox_height]
-                boxes.append([coco_format[0] / width, coco_format[1] / height, (coco_format[0] + coco_format[2]) / width, (coco_format[1] + coco_format[3]) / height])
+                boxes.append([bbox[0] / width, bbox[1] / height, bbox[2] / width, bbox[3] / height])
                 label = ast.literal_eval(annotation[class_index])
+                label = self.label_map[label]
+                gt_boxes.append([bbox[0], bbox[1], bbox[2], bbox[3], label, 0, 0])
                 labels.append(label)
             
             boxes = torch.tensor(boxes)
             labels = torch.tensor(labels)
+            gt_boxes = torch.tensor(gt_boxes)
         if self.transform is not None:
             image, (height, width), boxes, labels = self.transform(img, (height, width), boxes, labels)
-        return image, idx, (height, width), boxes, labels
+        return image, idx, (height, width), boxes, labels, gt_boxes
 
     def object_labels(self):
+        counter = 1
+        self.label_info[0] = "background"
+        self.label_map[0] = 0
         for ann_file in self.ann_files:
             with open(ann_file) as f:
                 reader = csv.reader(f)
@@ -116,7 +121,6 @@ class Cognata(Dataset):
                 annotations = rows[1:]
                 class_index = header.index('object_class')
                 class_name_index = header.index('object_class_name')
-                counter = 1
                 for annotation in annotations:
                     label = ast.literal_eval(annotation[class_index])
                     if label not in self.label_map:

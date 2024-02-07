@@ -14,10 +14,10 @@ from src.model import SSD, SSDLite, ResNet, MobileNetV2
 from src.utils import generate_dboxes, Encoder, coco_classes
 from src.transform import SSDTransformer
 from src.loss import Loss
-from src.process import train, evaluate
+from src.process import train, evaluate, cognata_eval
 from src.dataset import collate_fn, CocoDataset, Cognata
 import config
-
+from torchinfo import summary 
 
 def get_args():
     parser = ArgumentParser(description="Implementation of SSD")
@@ -71,19 +71,24 @@ def main(opt):
                    "collate_fn": collate_fn}
 
     image_size = config.model['image_size']
+    num_classes = len(coco_classes)
     if opt.model == "ssd":
         dboxes = generate_dboxes(config.model, model="ssd")
-        model = SSD(backbone=ResNet(), num_classes=len(coco_classes))
     else:
         dboxes = generate_dboxes(model="ssdlite")
-        model = SSDLite(backbone=MobileNetV2(), num_classes=len(coco_classes))
     if opt.dataset == 'Cognata':
         folders = ['Cognata_Camera_01_4M']
         train_set = Cognata(opt.data_path, folders, SSDTransformer(dboxes, image_size, val=False))
         test_set = Cognata(opt.data_path, folders, SSDTransformer(dboxes, image_size, val=True))
+        num_classes = len(train_set.label_map.keys())
     elif opt.dataset == 'Coco':
         train_set = CocoDataset(opt.data_path, 2017, "train", SSDTransformer(dboxes, image_size, val=False))
         test_set = CocoDataset(opt.data_path, 2017, "val", SSDTransformer(dboxes, image_size, val=True))
+    if opt.model == "ssd":
+        model = SSD(backbone=ResNet(), num_classes=num_classes)
+        summary(model, input_size=(opt.batch_size, 3, 720, 1280))
+    else:
+        model = SSDLite(backbone=MobileNetV2(), num_classes=len(coco_classes))
     train_loader = DataLoader(train_set, **train_params)
     test_loader = DataLoader(test_set, **test_params)
 
@@ -133,8 +138,10 @@ def main(opt):
 
     for epoch in range(first_epoch, opt.epochs):
         train(model, train_loader, epoch, writer, criterion, optimizer, scheduler, opt.amp)
-        evaluate(model, test_loader, epoch, writer, encoder, opt.nms_threshold)
-
+        if opt.dataset == 'Cognata':
+            cognata_eval(model, test_loader, epoch, writer, encoder, opt.nms_threshold)
+        else:
+            evaluate(model, test_loader, epoch, writer, encoder, opt.nms_threshold)
         checkpoint = {"epoch": epoch,
                       "model_state_dict": model.module.state_dict(),
                       "optimizer": optimizer.state_dict(),
