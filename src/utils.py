@@ -193,7 +193,7 @@ class DefaultBoxes(object):
                 w, h = sk1 * sqrt(alpha)/fig_size[1], sk1 / (sqrt(alpha)*fig_size[0])
                 all_sizes.append((w, h))
             for w, h in all_sizes:
-                for i, j in itertools.product(range(sfeat[1]), range(sfeat[0])):
+                for i, j in itertools.product(range(sfeat[0]), range(sfeat[1])):
                     cx, cy = (j + 0.5)*steps[idx] / fig_size[1], (i + 0.5)*steps[idx] / fig_size[0]
                     self.default_boxes.append((cx, cy, w, h))
 
