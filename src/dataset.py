@@ -96,6 +96,9 @@ class Cognata(Dataset):
             for annotation in annotations:
                 bbox = annotation[bbox_index]
                 bbox = ast.literal_eval(bbox)
+                object_area = (bbox[2]-bbox[0])*(bbox[3]-bbox[1])
+                if object_area <= 20:
+                    continue
                 boxes.append([bbox[0] / width, bbox[1] / height, bbox[2] / width, bbox[3] / height])
                 label = ast.literal_eval(annotation[class_index])
                 label = self.label_map[label]
