@@ -60,16 +60,17 @@ class CocoDataset(CocoDetection):
         return image, target[0]["image_id"], (height, width), boxes, labels
 
 class Cognata(Dataset):
-    def __init__(self, root, folders, transform=None):
+    def __init__(self, root, folders, cameras, transform=None):
         ann_files = []
         img_files = []
         self.label_map = {}
         self.label_info = {}
         for folder in folders:
-            ann_folder = os.path.join(root, folder, 'Cognata_Camera_01_8M_ann')
-            img_folder = os.path.join(root, folder, 'Cognata_Camera_01_8M_png')
-            ann_files += [os.path.join(ann_folder, f) for f in os.listdir(ann_folder) if os.path.isfile(os.path.join(ann_folder, f))]
-            img_files += [os.path.join(img_folder, f) for f in os.listdir(img_folder) if os.path.isfile(os.path.join(img_folder, f))]
+            for camera in cameras:
+                ann_folder = os.path.join(root, folder, camera + '_ann')
+                img_folder = os.path.join(root, folder, camera + '_png')
+                ann_files += [os.path.join(ann_folder, f) for f in os.listdir(ann_folder) if os.path.isfile(os.path.join(ann_folder, f))]
+                img_files += [os.path.join(img_folder, f) for f in os.listdir(img_folder) if os.path.isfile(os.path.join(img_folder, f))]
         self.transform = transform
         self.root = root
         self.ann_files = sorted(ann_files)

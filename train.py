@@ -71,7 +71,7 @@ def main(opt):
                    "num_workers": opt.num_workers,
                    "collate_fn": collate_fn}
 
-    config = importlib.import_module(opt.config)
+    config = importlib.import_module('config.' + opt.config)
     image_size = config.model['image_size']
     num_classes = len(coco_classes)
     if opt.model == "ssd":
@@ -79,9 +79,11 @@ def main(opt):
     else:
         dboxes = generate_dboxes(model="ssdlite")
     if opt.dataset == 'Cognata':
-        folders = config.dataset['folders']
-        train_set = Cognata(opt.data_path, folders, SSDTransformer(dboxes, image_size, val=False))
-        test_set = Cognata(opt.data_path, folders, SSDTransformer(dboxes, image_size, val=True))
+        train_folders = config.dataset['train_folders']
+        val_folders = config.dataset['val_folders']
+        cameras = config.dataset['cameras']
+        train_set = Cognata(opt.data_path, train_folders, cameras, SSDTransformer(dboxes, image_size, val=False))
+        test_set = Cognata(opt.data_path, val_folders, cameras, SSDTransformer(dboxes, image_size, val=True))
         num_classes = len(train_set.label_map.keys())
     elif opt.dataset == 'Coco':
         train_set = CocoDataset(opt.data_path, 2017, "train", SSDTransformer(dboxes, image_size, val=False))
