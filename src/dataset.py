@@ -66,8 +66,8 @@ class Cognata(Dataset):
         self.label_map = {}
         self.label_info = {}
         for folder in folders:
-            ann_folder = os.path.join(root, folder + '_ann')
-            img_folder = os.path.join(root, folder + '_png')
+            ann_folder = os.path.join(root, folder, 'Cognata_Camera_01_8M_ann')
+            img_folder = os.path.join(root, folder, 'Cognata_Camera_01_8M_png')
             ann_files += [os.path.join(ann_folder, f) for f in os.listdir(ann_folder) if os.path.isfile(os.path.join(ann_folder, f))]
             img_files += [os.path.join(img_folder, f) for f in os.listdir(img_folder) if os.path.isfile(os.path.join(img_folder, f))]
         self.transform = transform

@@ -11,3 +11,7 @@ model = dict(
     scales = [21, 45, 99, 153, 207, 261, 315],
     aspect_ratios = [[2, 0.5], [2, 0.5, 3, 1/3], [2, 0.5, 3, 1/3], [2, 0.5, 3, 1/3], [2, 0.5], [2, 0.5]]
 )
+
+dataset = dict(
+    folders = ['10001_Urban_Clear_Noon']
+)

@@ -3,6 +3,7 @@
 """
 import os
 import shutil
+import importlib
 from argparse import ArgumentParser
 
 import torch
@@ -16,7 +17,6 @@ from src.transform import SSDTransformer
 from src.loss import Loss
 from src.process import train, evaluate, cognata_eval
 from src.dataset import collate_fn, CocoDataset, Cognata
-import config
 from torchinfo import summary 
 
 def get_args():
@@ -45,6 +45,7 @@ def get_args():
                         help='Used for multi-process training. Can either be manually set ' +
                              'or automatically set by using \'python -m multiproc\'.')
     parser.add_argument("--dataset", default='Cognata', type=str)
+    parser.add_argument("--config", default='config', type=str)
     args = parser.parse_args()
     return args
 
@@ -70,6 +71,7 @@ def main(opt):
                    "num_workers": opt.num_workers,
                    "collate_fn": collate_fn}
 
+    config = importlib.import_module(opt.config)
     image_size = config.model['image_size']
     num_classes = len(coco_classes)
     if opt.model == "ssd":
@@ -77,7 +79,7 @@ def main(opt):
     else:
         dboxes = generate_dboxes(model="ssdlite")
     if opt.dataset == 'Cognata':
-        folders = ['Cognata_Camera_01_4M']
+        folders = config.dataset['folders']
         train_set = Cognata(opt.data_path, folders, SSDTransformer(dboxes, image_size, val=False))
         test_set = Cognata(opt.data_path, folders, SSDTransformer(dboxes, image_size, val=True))
         num_classes = len(train_set.label_map.keys())
