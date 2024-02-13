@@ -78,6 +78,8 @@ class Cognata(Dataset):
         self.label_map = {}
         self.label_info = {}
         self.object_labels()
+        print(self.label_map)
+        print(self.label_info)
     def __len__(self):
         return len(self.img_files)
     
