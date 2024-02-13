@@ -46,6 +46,7 @@ def get_args():
                              'or automatically set by using \'python -m multiproc\'.')
     parser.add_argument("--dataset", default='Cognata', type=str)
     parser.add_argument("--config", default='config', type=str)
+    parser.add_argument("--save-path", default='SSD.pth', type=str)
     args = parser.parse_args()
     return args
 
@@ -127,7 +128,7 @@ def main(opt):
 
     if not os.path.isdir(opt.save_folder):
         os.makedirs(opt.save_folder)
-    checkpoint_path = os.path.join(opt.save_folder, "SSD.pth")
+    checkpoint_path = os.path.join(opt.save_folder, opt.save_path)
 
     writer = SummaryWriter(opt.log_path)
 
