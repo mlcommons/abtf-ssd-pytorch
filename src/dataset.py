@@ -74,7 +74,7 @@ class Cognata(Dataset):
         self.transform = transform
         self.root = root
         self.ann_files = sorted(ann_files)
-        self.img_files = img_files
+        self.img_files = sorted(img_files)
         self.label_map = {}
         self.label_info = {}
         self.object_labels()

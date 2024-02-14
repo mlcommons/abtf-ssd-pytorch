@@ -85,6 +85,9 @@ def main(opt):
         cameras = config.dataset['cameras']
         train_set = Cognata(opt.data_path, train_folders, cameras, SSDTransformer(dboxes, image_size, val=False))
         test_set = Cognata(opt.data_path, val_folders, cameras, SSDTransformer(dboxes, image_size, val=True))
+        test_set.label_map = train_set.label_map
+        test_set.label_info = train_set.label_info
+
         num_classes = len(train_set.label_map.keys())
     elif opt.dataset == 'Coco':
         train_set = CocoDataset(opt.data_path, 2017, "train", SSDTransformer(dboxes, image_size, val=False))
