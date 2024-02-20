@@ -17,7 +17,7 @@ def get_args():
 
 def main(opt):
     config = importlib.import_module('config.' + opt.config)
-    model = SSD(backbone=ResNet(), num_classes=opt.num_classes)
+    model = SSD(config.model, backbone=ResNet(), num_classes=opt.num_classes)
     image_size = config.model['image_size']
     summary(model, input_size=(opt.batch_size, 3, image_size[0], image_size[1]))
 
