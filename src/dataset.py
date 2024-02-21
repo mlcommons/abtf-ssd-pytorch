@@ -135,9 +135,16 @@ def prepare_cognata(root, folders, cameras):
                 with open(ann_files[i]) as f:
                     reader = csv.reader(f)
                     rows = list(reader)
+                    header = rows[0]
                     annotations = rows[1:]
-                    if len(annotations) > 0:
-                        files.append({'img': img_files[i], 'ann': ann_files[i]})
+                    bbox_index = header.index('bounding_box_2D')
+                    for annotation in annotations:
+                        bbox = annotation[bbox_index]
+                        bbox = ast.literal_eval(bbox)
+                        object_area = (bbox[2]-bbox[0])*(bbox[3]-bbox[1])
+                        if object_area > 20:
+                            files.append({'img': img_files[i], 'ann': ann_files[i]})
+                            break
     
     label_map, label_info = object_labels(files)
     return files, label_map, label_info
