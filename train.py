@@ -16,7 +16,7 @@ from src.utils import generate_dboxes, Encoder, coco_classes
 from src.transform import SSDTransformer
 from src.loss import Loss
 from src.process import train, evaluate, cognata_eval
-from src.dataset import collate_fn, CocoDataset, Cognata
+from src.dataset import collate_fn, CocoDataset, Cognata, prepare_cognata, train_val_split
 from torchinfo import summary 
 
 def get_args():
@@ -80,15 +80,15 @@ def main(opt):
     else:
         dboxes = generate_dboxes(model="ssdlite")
     if opt.dataset == 'Cognata':
-        train_folders = config.dataset['train_folders']
-        val_folders = config.dataset['val_folders']
+        folders = config.dataset['folders']
         cameras = config.dataset['cameras']
-        train_set = Cognata(opt.data_path, train_folders, cameras, SSDTransformer(dboxes, image_size, val=False))
-        test_set = Cognata(opt.data_path, val_folders, cameras, SSDTransformer(dboxes, image_size, val=True))
-        test_set.label_map = train_set.label_map
-        test_set.label_info = train_set.label_info
-
-        num_classes = len(train_set.label_map.keys())
+        files, label_map, label_info = prepare_cognata(opt.data_path, folders, cameras)
+        files = train_val_split(files)
+        train_set = Cognata(label_map, label_info, files['train'], SSDTransformer(dboxes, image_size, val=False))
+        test_set = Cognata(label_map, label_info, files['val'], SSDTransformer(dboxes, image_size, val=True))
+        num_classes = len(label_map.keys())
+        print(label_map)
+        print(label_info)
     elif opt.dataset == 'Coco':
         train_set = CocoDataset(opt.data_path, 2017, "train", SSDTransformer(dboxes, image_size, val=False))
         test_set = CocoDataset(opt.data_path, 2017, "val", SSDTransformer(dboxes, image_size, val=True))

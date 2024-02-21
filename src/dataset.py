@@ -9,6 +9,7 @@ import os
 from PIL import Image
 import csv
 import ast
+import random
 
 def collate_fn(batch):
     items = list(zip(*batch))
@@ -60,36 +61,21 @@ class CocoDataset(CocoDetection):
         return image, target[0]["image_id"], (height, width), boxes, labels
 
 class Cognata(Dataset):
-    def __init__(self, root, folders, cameras, transform=None):
-        ann_files = []
-        img_files = []
-        self.label_map = {}
-        self.label_info = {}
-        for folder in folders:
-            for camera in cameras:
-                ann_folder = os.path.join(root, folder, camera + '_ann')
-                img_folder = os.path.join(root, folder, camera + '_png')
-                ann_files += [os.path.join(ann_folder, f) for f in os.listdir(ann_folder) if os.path.isfile(os.path.join(ann_folder, f))]
-                img_files += [os.path.join(img_folder, f) for f in os.listdir(img_folder) if os.path.isfile(os.path.join(img_folder, f))]
+    def __init__(self, label_map, label_info, files, transform=None):
+        self.label_map = label_map
+        self.label_info = label_info
         self.transform = transform
-        self.root = root
-        self.ann_files = sorted(ann_files)
-        self.img_files = sorted(img_files)
-        self.label_map = {}
-        self.label_info = {}
-        self.object_labels()
-        print(self.label_map)
-        print(self.label_info)
+        self.files = files
     def __len__(self):
-        return len(self.img_files)
+        return len(self.files)
     
     def __getitem__(self, idx):
-        img = Image.open(self.img_files[idx]).convert('RGB')
+        img = Image.open(self.files[idx]['img']).convert('RGB')
         width, height = img.size
         boxes = []
         labels = []
         gt_boxes = []
-        with open(self.ann_files[idx]) as f:
+        with open(self.files[idx]['ann']) as f:
             reader = csv.reader(f)
             rows = list(reader)
             header = rows[0]
@@ -115,23 +101,48 @@ class Cognata(Dataset):
             image, (height, width), boxes, labels = self.transform(img, (height, width), boxes, labels)
         return image, idx, (height, width), boxes, labels, gt_boxes
 
-    def object_labels(self):
-        counter = 1
-        self.label_info[0] = "background"
-        self.label_map[0] = 0
-        for ann_file in self.ann_files:
-            with open(ann_file) as f:
-                reader = csv.reader(f)
-                rows = list(reader)
-                header = rows[0]
-                annotations = rows[1:]
-                class_index = header.index('object_class')
-                class_name_index = header.index('object_class_name')
-                for annotation in annotations:
-                    label = ast.literal_eval(annotation[class_index])
-                    if label not in self.label_map:
-                        self.label_map[label] = counter
-                        self.label_info[counter] = annotation[class_name_index]
-                        counter += 1
+def object_labels(files):
+    counter = 1
+    label_map = {}
+    label_info = {}
+    label_info[0] = "background"
+    label_map[0] = 0
+    for file in files:
+        with open(file['ann']) as f:
+            reader = csv.reader(f)
+            rows = list(reader)
+            header = rows[0]
+            annotations = rows[1:]
+            class_index = header.index('object_class')
+            class_name_index = header.index('object_class_name')
+            for annotation in annotations:
+                label = ast.literal_eval(annotation[class_index])
+                if label not in label_map:
+                    label_map[label] = counter
+                    label_info[counter] = annotation[class_name_index]
+                    counter += 1
+    return label_map, label_info
 
+def prepare_cognata(root, folders, cameras):
+    files = []
+    for folder in folders:
+        for camera in cameras:
+            ann_folder = os.path.join(root, folder, camera + '_ann')
+            img_folder = os.path.join(root, folder, camera + '_png')
+            ann_files = sorted([os.path.join(ann_folder, f) for f in os.listdir(ann_folder) if os.path.isfile(os.path.join(ann_folder, f))])
+            img_files = sorted([os.path.join(img_folder, f) for f in os.listdir(img_folder) if os.path.isfile(os.path.join(img_folder, f))])
+            for i in range(len(ann_files)):
+                with open(ann_files[i]) as f:
+                    reader = csv.reader(f)
+                    rows = list(reader)
+                    annotations = rows[1:]
+                    if len(annotations) > 0:
+                        files.append({'img': img_files[i], 'ann': ann_files[i]})
+    
+    label_map, label_info = object_labels(files)
+    return files, label_map, label_info
 
+def train_val_split(files):
+    random.shuffle(files)
+    val_index = round(len(files)*0.8)
+    return {'train': files[:val_index], 'val': files[val_index:]}

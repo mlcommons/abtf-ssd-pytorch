@@ -27,7 +27,6 @@ model = dict(
 )
 
 dataset = dict(
-    train_folders = ['10001_Urban_Clear_Noon'],
-    val_folders = ['10001_Urban_Clear_Noon'],
-    cameras = ['Cognata_Camera_01_8M']
+    folders = ['10001_Urban_Clear_Noon', '10003_Urban_Clear_Noon'],
+    cameras = ['Cognata_Camera_01_8M', 'Cognata_Camera_02_8M']
 )
