@@ -97,7 +97,7 @@ def cognata_eval(model, test_loader, epoch, writer, encoder, nms_threshold):
                 ploc_i = ploc[idx, :, :].unsqueeze(0)
                 plabel_i = plabel[idx, :, :].unsqueeze(0)
                 try:
-                    result = encoder.decode_batch(ploc_i, plabel_i, nms_threshold, 200)[0]
+                    result = encoder.decode_batch(ploc_i, plabel_i, nms_threshold, 500)[0]
                 except:
                     print("No object detected in idx: {}".format(idx))
                     continue

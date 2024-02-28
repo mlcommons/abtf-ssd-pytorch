@@ -98,7 +98,7 @@ class Cognata(Dataset):
             labels = torch.tensor(labels)
             gt_boxes = torch.tensor(gt_boxes)
         if self.transform is not None:
-            image, (height, width), boxes, labels = self.transform(img, (height, width), boxes, labels)
+            image, (height, width), boxes, labels = self.transform(img, (height, width), boxes, labels, max_num=500)
         return image, idx, (height, width), boxes, labels, gt_boxes
 
 def object_labels(files):
