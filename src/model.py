@@ -28,16 +28,25 @@ class Base(nn.Module):
 
 
 class ResNet(nn.Module):
-    def __init__(self):
+    def __init__(self, model_config):
         super().__init__()
         backbone = resnet50(pretrained=True)
         self.out_channels = [1024, 512, 512, 256, 256, 256]
         self.feature_extractor = nn.Sequential(*list(backbone.children())[:7])
-
-        conv4_block1 = self.feature_extractor[-1][0]
-        conv4_block1.conv1.stride = (1, 1)
-        conv4_block1.conv2.stride = (1, 1)
-        conv4_block1.downsample[0].stride = (1, 1)
+        for block in model_config['backbone']:
+            conv_block = self.feature_extractor[block['block_no']][block['layer']]
+            for conv in block['conv']:
+                for k, v in conv.items():
+                    conv_layer = getattr(conv_block, 'conv' + str(k))
+                    conv_layer.kernel_size = v['kernel_size']
+                    conv_layer.stride = v['stride']
+                    conv_layer.padding = v['padding']
+            if block['downsample'] is not None:
+                conv_block.downsample[0].stride = block['downsample']['stride']
+        #conv4_block1 = self.feature_extractor[-1][0]
+        #conv4_block1.conv1.stride = (1, 1)
+        #conv4_block1.conv2.stride = (1, 1)
+        #conv4_block1.downsample[0].stride = (1, 1)
 
     def forward(self, x):
         x = self.feature_extractor(x)
@@ -45,7 +54,7 @@ class ResNet(nn.Module):
 
 
 class SSD(Base):
-    def __init__(self, model_config, backbone=ResNet(), num_classes=81):
+    def __init__(self, model_config, backbone, num_classes=81):
         super().__init__()
 
         self.feature_extractor = backbone

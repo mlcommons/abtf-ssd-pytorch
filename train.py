@@ -93,7 +93,7 @@ def main(opt):
         train_set = CocoDataset(opt.data_path, 2017, "train", SSDTransformer(dboxes, image_size, val=False))
         test_set = CocoDataset(opt.data_path, 2017, "val", SSDTransformer(dboxes, image_size, val=True))
     if opt.model == "ssd":
-        model = SSD(config.model, backbone=ResNet(), num_classes=num_classes)
+        model = SSD(config.model, backbone=ResNet(config.model), num_classes=num_classes)
     else:
         model = SSDLite(backbone=MobileNetV2(), num_classes=len(coco_classes))
     train_loader = DataLoader(train_set, **train_params)
