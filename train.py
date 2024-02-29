@@ -19,6 +19,20 @@ from src.process import train, evaluate, cognata_eval
 from src.dataset import collate_fn, CocoDataset, Cognata, prepare_cognata, train_val_split
 from torchinfo import summary 
 
+def setup(rank, world_size):
+    os.environ['MASTER_ADDR'] = 'localhost'
+    os.environ['MASTER_PORT'] = '12355'
+    torch.distributed.init_process_group("nccl", rank=rank, world_size=world_size)
+
+def cleanup():
+    torch.distributed.destroy_process_group()
+
+def prepare(dataset, params, rank, world_size):
+    sampler = torch.utils.data.distributed.DistributedSampler(dataset, num_replicas=world_size, rank=rank, shuffle=False, drop_last=False)
+    dataloader = DataLoader(dataset, sampler=sampler, **params)
+    
+    return dataloader
+
 def get_args():
     parser = ArgumentParser(description="Implementation of SSD")
     parser.add_argument("--data-path", type=str, default="/coco",
@@ -39,36 +53,27 @@ def get_args():
     parser.add_argument("--momentum", type=float, default=0.9, help="momentum argument for SGD optimizer")
     parser.add_argument("--weight-decay", type=float, default=0.0005, help="momentum argument for SGD optimizer")
     parser.add_argument("--nms-threshold", type=float, default=0.5)
-    parser.add_argument("--num-workers", type=int, default=4)
-
+    parser.add_argument("--num-workers", type=int, default=0)
+    parser.add_argument("--num-gpus", type=int, default=1)
     parser.add_argument('--local_rank', default=0, type=int,
                         help='Used for multi-process training. Can either be manually set ' +
                              'or automatically set by using \'python -m multiproc\'.')
     parser.add_argument("--dataset", default='Cognata', type=str)
     parser.add_argument("--config", default='config', type=str)
     parser.add_argument("--save-path", default='SSD.pth', type=str)
+    
     args = parser.parse_args()
     return args
 
 
-def main(opt):
-    if torch.cuda.is_available():
-        torch.distributed.init_process_group(backend='nccl', init_method='env://')
-        num_gpus = torch.distributed.get_world_size()
-        torch.cuda.manual_seed(123)
-    else:
-        torch.manual_seed(123)
-        num_gpus = 1
+def main(rank, opt, world_size):
+    setup(rank, world_size)
 
-    train_params = {"batch_size": opt.batch_size * num_gpus,
-                    "shuffle": True,
-                    "drop_last": False,
+    train_params = {"batch_size": opt.batch_size,
                     "num_workers": opt.num_workers,
                     "collate_fn": collate_fn}
 
-    test_params = {"batch_size": opt.batch_size * num_gpus,
-                   "shuffle": False,
-                   "drop_last": False,
+    test_params = {"batch_size": opt.batch_size,
                    "num_workers": opt.num_workers,
                    "collate_fn": collate_fn}
 
@@ -96,12 +101,12 @@ def main(opt):
         model = SSD(config.model, backbone=ResNet(config.model), num_classes=num_classes)
     else:
         model = SSDLite(backbone=MobileNetV2(), num_classes=len(coco_classes))
-    train_loader = DataLoader(train_set, **train_params)
-    test_loader = DataLoader(test_set, **test_params)
+    train_loader = prepare(train_set, train_params, rank, world_size)
+    test_loader = prepare(test_set, test_params, rank, world_size)
 
     encoder = Encoder(dboxes)
 
-    opt.lr = opt.lr * num_gpus * (opt.batch_size / 32)
+    opt.lr = opt.lr * (opt.batch_size / 32)
     criterion = Loss(dboxes)
 
     optimizer = torch.optim.SGD(model.parameters(), lr=opt.lr, momentum=opt.momentum,
@@ -121,7 +126,8 @@ def main(opt):
             from torch.nn.parallel import DistributedDataParallel as DDP
         # It is recommended to use DistributedDataParallel, instead of DataParallel
         # to do multi-GPU training, even if there is only a single node.
-        model = DDP(model)
+        model = model.to(rank)
+        model = DDP(model, device_ids=[rank], output_device=rank)
 
 
     if os.path.isdir(opt.log_path):
@@ -153,9 +159,17 @@ def main(opt):
                       "model_state_dict": model.module.state_dict(),
                       "optimizer": optimizer.state_dict(),
                       "scheduler": scheduler.state_dict()}
-        torch.save(checkpoint, checkpoint_path)
+        if rank == 0:
+            torch.save(checkpoint, checkpoint_path)
+        torch.distributed.barrier()
+    cleanup()
 
 
 if __name__ == "__main__":
     opt = get_args()
-    main(opt)
+    world_size = opt.num_gpus
+    torch.multiprocessing.spawn(
+        main,
+        args=(opt, world_size),
+        nprocs=world_size
+    )
