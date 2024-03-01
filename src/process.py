@@ -114,11 +114,20 @@ def cognata_eval(model, test_loader, epoch, writer, encoder, nms_threshold):
                 scores = torch.tensor(scores, device='cuda')
                 preds.append({'boxes': dts, 'labels': labels, 'scores': scores})
                 targets.append({'boxes': gt_boxes[idx][:,:4].to(device='cuda'), 'labels': gt_boxes[idx][:, 4].to(device='cuda') })
+    metric = MeanAveragePrecision(iou_type="bbox", class_metrics=True)
+    metric.update(preds, targets)
+    pp = pprint.PrettyPrinter(indent=4)
+    pp.pprint(metric.compute())
+    '''
+    print('start ap')
     all_preds = [None]*torch.distributed.get_world_size()
     all_targets = [None]*torch.distributed.get_world_size()
+    print('first gather')
     torch.distributed.all_gather_object(all_preds, preds)
+    print('second gather')
     torch.distributed.all_gather_object(all_targets, targets)
     if torch.distributed.get_rank() == 0:
+        print('calculating')
         final_preds = []
         final_targets = []
         list(map(final_preds.extend, all_preds))
@@ -127,4 +136,6 @@ def cognata_eval(model, test_loader, epoch, writer, encoder, nms_threshold):
         metric.update(final_preds, final_targets)
         pp = pprint.PrettyPrinter(indent=4)
         pp.pprint(metric.compute())
-    torch.distributed.barrier()
+    print('end')
+    #torch.distributed.barrier()
+    '''
