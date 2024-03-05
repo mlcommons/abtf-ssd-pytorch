@@ -51,7 +51,6 @@ def get_args():
     parser.add_argument("--weight-decay", type=float, default=0.0005, help="momentum argument for SGD optimizer")
     parser.add_argument("--nms-threshold", type=float, default=0.5)
     parser.add_argument("--num-workers", type=int, default=0)
-    parser.add_argument("--num-gpus", type=int, default=1)
     parser.add_argument('--local_rank', default=0, type=int,
                         help='Used for multi-process training. Can either be manually set ' +
                              'or automatically set by using \'python -m multiproc\'.')
@@ -160,8 +159,8 @@ def main(rank, opt, world_size):
 
 if __name__ == "__main__":
     opt = get_args()
-    world_size = opt.num_gpus
     torch.distributed.init_process_group("nccl", init_method='env://')
+    world_size = torch.distributed.get_world_size()
     rank = torch.distributed.get_rank()
     torch.cuda.set_device(rank)
     main(rank, opt, world_size)
