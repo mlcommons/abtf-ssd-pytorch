@@ -34,14 +34,20 @@ class ResNet(nn.Module):
         self.out_channels = [1024, 512, 512, 256, 256, 256]
         self.feature_extractor = nn.Sequential(*list(backbone.children())[:7])
         for block in model_config['backbone']:
-            conv_block = self.feature_extractor[block['block_no']][block['layer']]
-            for conv in block['conv']:
-                for k, v in conv.items():
-                    conv_layer = getattr(conv_block, 'conv' + str(k))
-                    conv_layer.kernel_size = v['kernel_size']
-                    conv_layer.stride = v['stride']
-                    conv_layer.padding = v['padding']
-            if block['downsample'] is not None:
+            if block['block_no'] == 0:
+                conv_layer = self.feature_extractor[block['block_no']]
+                conv_layer.kernel_size = block['conv']['kernel_size']
+                conv_layer.stride = block['conv']['stride']
+                conv_layer.padding = block['conv']['padding']
+            else:
+                conv_block = self.feature_extractor[block['block_no']][block['layer']]
+                for conv in block['conv']:
+                    for k, v in conv.items():
+                        conv_layer = getattr(conv_block, 'conv' + str(k))
+                        conv_layer.kernel_size = v['kernel_size']
+                        conv_layer.stride = v['stride']
+                        conv_layer.padding = v['padding']
+            if 'downsample' in block and block['downsample'] is not None:
                 conv_block.downsample[0].stride = block['downsample']['stride']
         #conv4_block1 = self.feature_extractor[-1][0]
         #conv4_block1.conv1.stride = (1, 1)
@@ -61,7 +67,7 @@ class SSD(Base):
         self.num_classes = num_classes
         self.config = model_config
         self.pre_blocks = None
-        if self.config['pre_backbone']:
+        if 'pre_backbone' in self.config and self.config['pre_backbone']:
             self.pre_backbone([3, 3, 3], [3, 3, 3], self.config['pre_backbone'])
         self._build_additional_features(self.feature_extractor.out_channels)
         self.num_defaults = self.config['head']['num_defaults']
