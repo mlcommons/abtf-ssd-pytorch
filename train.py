@@ -56,7 +56,9 @@ def get_args():
                              'or automatically set by using \'python -m multiproc\'.')
     parser.add_argument("--dataset", default='Cognata', type=str)
     parser.add_argument("--config", default='config', type=str)
-    parser.add_argument("--save-path", default='SSD.pth', type=str)
+    parser.add_argument("--save-name", default='SSD', type=str)
+    parser.add_argument("--pretrained-model", type=str, default="trained_models/SSD.pth")
+    parser.add_argument("--checkpoint-freq", type=int, default=1)
     
     args = parser.parse_args()
     return args
@@ -132,12 +134,12 @@ def main(rank, opt, world_size):
     if not os.path.isdir(opt.save_folder):
         if rank == 0:
             os.makedirs(opt.save_folder)
-    checkpoint_path = os.path.join(opt.save_folder, opt.save_path)
+    checkpoint_path = os.path.join(opt.save_folder, opt.save_name)
 
     writer = SummaryWriter(opt.log_path)
 
-    if os.path.isfile(checkpoint_path):
-        checkpoint = torch.load(checkpoint_path)
+    if os.path.isfile(opt.pretrained_model):
+        checkpoint = torch.load(opt.pretrained_model)
         first_epoch = checkpoint["epoch"] + 1
         model.module.load_state_dict(checkpoint["model_state_dict"])
         scheduler.load_state_dict(checkpoint["scheduler"])
@@ -151,8 +153,8 @@ def main(rank, opt, world_size):
                       "model_state_dict": model.module.state_dict(),
                       "optimizer": optimizer.state_dict(),
                       "scheduler": scheduler.state_dict()}
-        if rank == 0:
-            torch.save(checkpoint, checkpoint_path)
+        if (rank == 0) and (epoch%opt.checkpoint_freq == 0):
+            torch.save(checkpoint, checkpoint_path + '_ep' + str(epoch+1) + '.pth')
         torch.distributed.barrier()
     cleanup()
 
