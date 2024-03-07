@@ -21,11 +21,22 @@ Run:
 
 # Training
 
-To train the model run and reproduce the initial test run.
+To train the model run and produce an 8MP resultion test.
 
-`python -m torch.distributed.launch --nproc_per_node=1 train.py --model ssd --batch-size 1 --dataset Cognata --data-path /cognata --save-folder /trained_model --config test_8MP --save-path test_8mp.pth --epoch 2`
+`python -m torch.distributed.launch --nproc_per_node= [num gpus] train.py --model ssd --batch-size 1 --dataset Cognata --data-path /cognata --save-folder /trained_models --config test_8MP --save-name test_8mp --epoch 2`
 
-Some differences are the addition of the flags `dataset`, `config`, and `save-path` (the file name). The model parameters are trained based on a config file located in the config folder. This is being actively developed so make sure when you train the model you use the right commit.
+Some differences are the addition of the flags `dataset`, `config`, and `save-name` (base name of the file). The model parameters are trained based on a config file located in the config folder. This is being actively developed so make sure when you train the model you use the right commit. The checkpoints are saved along with the epoch name, e.g. test_8mp_ep2.pth.
+
+If you are training from a checkpoint, add the `--pretrained-model` flag along the the path to the checkpoint.
+
+To evaluate a trained model
+
+`python -m torch.distributed.launch --nproc_per_node=1 evaluate.py --model ssd --batch-size 1 --dataset Cognata --data-path /cognata --pretrained-model [model path] --config test_8MP`
+> [!Note]
+> Evaluation only works with 1 gpu.
+
+To test on the dataset
+`python test_dataset.py --pretrained_model [path/to/trained_model] --dataset Cognata --data-path /cognata --config test_8MP`
 
 # Config file
 
