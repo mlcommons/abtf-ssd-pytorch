@@ -25,7 +25,7 @@ To train the model run and produce an 8MP resultion test.
 
 `python -m torch.distributed.launch --nproc_per_node= [num gpus] train.py --model ssd --batch-size 1 --dataset Cognata --data-path /cognata --save-folder /trained_models --config test_8MP --save-name test_8mp --epoch 2`
 
-Some differences are the addition of the flags `dataset`, `config`, and `save-name` (base name of the file). The model parameters are trained based on a config file located in the config folder. This is being actively developed so make sure when you train the model you use the right commit. The checkpoints are saved along with the epoch name, e.g. test_8mp_ep2.pth.
+Some differences are the addition of the flags `dataset`, `config`, and `save-name` (base name of the file). The model parameters are trained based on a config file located in the config folder. This is being actively developed so make sure when you train the model you use the right commit. The checkpoints are saved along with the epoch name, e.g. test_8mpep2.pth.
 
 If you are training from a checkpoint, add the `--pretrained-model` flag along the the path to the checkpoint.
 
