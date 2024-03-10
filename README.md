@@ -36,7 +36,7 @@ To evaluate a trained model
 > Evaluation only works with 1 gpu.
 
 To test on the dataset
-`python test_dataset.py --pretrained_model [path/to/trained_model] --dataset Cognata --data-path /cognata --config test_8MP`
+`python test_dataset.py --pretrained-model [path/to/trained_model] --dataset Cognata --data-path /cognata --config test_8MP`
 
 # Config file
 
