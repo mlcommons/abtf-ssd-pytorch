@@ -87,10 +87,10 @@ class Cognata(Dataset):
                 bbox = annotation[bbox_index]
                 bbox = ast.literal_eval(bbox)
                 object_area = (bbox[2]-bbox[0])*(bbox[3]-bbox[1])
+                label = ast.literal_eval(annotation[class_index])
                 if object_area <= 20 and not int(label) in self.ignore_classes:
                     continue
                 boxes.append([bbox[0] / width, bbox[1] / height, bbox[2] / width, bbox[3] / height])
-                label = ast.literal_eval(annotation[class_index])
                 label = self.label_map[label]
                 gt_boxes.append([bbox[0], bbox[1], bbox[2], bbox[3], label, 0, 0])
                 labels.append(label)
