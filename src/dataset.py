@@ -66,6 +66,7 @@ class Cognata(Dataset):
         self.label_info = label_info
         self.transform = transform
         self.files = files
+        self.ignore_classes = [2, 25, 31]
     def __len__(self):
         return len(self.files)
     
@@ -86,7 +87,7 @@ class Cognata(Dataset):
                 bbox = annotation[bbox_index]
                 bbox = ast.literal_eval(bbox)
                 object_area = (bbox[2]-bbox[0])*(bbox[3]-bbox[1])
-                if object_area <= 20:
+                if object_area <= 20 and not int(label) in self.ignore_classes:
                     continue
                 boxes.append([bbox[0] / width, bbox[1] / height, bbox[2] / width, bbox[3] / height])
                 label = ast.literal_eval(annotation[class_index])
@@ -101,7 +102,7 @@ class Cognata(Dataset):
             image, (height, width), boxes, labels = self.transform(img, (height, width), boxes, labels, max_num=500)
         return image, idx, (height, width), boxes, labels, gt_boxes
 
-def object_labels(files):
+def object_labels(files, ignore_classes):
     counter = 1
     label_map = {}
     label_info = {}
@@ -117,7 +118,7 @@ def object_labels(files):
             class_name_index = header.index('object_class_name')
             for annotation in annotations:
                 label = ast.literal_eval(annotation[class_index])
-                if label not in label_map:
+                if label not in label_map and not int(label) in ignore_classes:
                     label_map[label] = counter
                     label_info[counter] = annotation[class_name_index]
                     counter += 1
@@ -146,10 +147,11 @@ def prepare_cognata(root, folders, cameras):
                             files.append({'img': img_files[i], 'ann': ann_files[i]})
                             break
     
-    label_map, label_info = object_labels(files)
+    ignore_classes = [2, 25, 31]
+    label_map, label_info = object_labels(files, ignore_classes)
     return files, label_map, label_info
 
 def train_val_split(files):
-    random.shuffle(files)
+    random.Random(5).shuffle(files)
     val_index = round(len(files)*0.8)
     return {'train': files[:val_index], 'val': files[val_index:]}
