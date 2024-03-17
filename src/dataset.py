@@ -86,9 +86,11 @@ class Cognata(Dataset):
             for annotation in annotations:
                 bbox = annotation[bbox_index]
                 bbox = ast.literal_eval(bbox)
-                object_area = (bbox[2]-bbox[0])*(bbox[3]-bbox[1])
+                object_width = bbox[2]-bbox[0]
+                object_height = bbox[3]-bbox[1]
+                object_area = object_width*object_height
                 label = ast.literal_eval(annotation[class_index])
-                if object_area <= 20 and not int(label) in self.ignore_classes:
+                if object_area < 50 or int(label) in self.ignore_classes or object_height < 8 or object_width < 8:
                     continue
                 boxes.append([bbox[0] / width, bbox[1] / height, bbox[2] / width, bbox[3] / height])
                 label = self.label_map[label]
@@ -126,6 +128,7 @@ def object_labels(files, ignore_classes):
 
 def prepare_cognata(root, folders, cameras):
     files = []
+    ignore_classes = [2, 25, 31]
     for folder in folders:
         for camera in cameras:
             ann_folder = os.path.join(root, folder, camera + '_ann')
@@ -139,15 +142,18 @@ def prepare_cognata(root, folders, cameras):
                     header = rows[0]
                     annotations = rows[1:]
                     bbox_index = header.index('bounding_box_2D')
+                    class_index = header.index('object_class')
                     for annotation in annotations:
                         bbox = annotation[bbox_index]
                         bbox = ast.literal_eval(bbox)
-                        object_area = (bbox[2]-bbox[0])*(bbox[3]-bbox[1])
-                        if object_area > 20:
+                        object_width = bbox[2]-bbox[0]
+                        object_height = bbox[3]-bbox[1]
+                        object_area = object_width*object_height
+                        label = ast.literal_eval(annotation[class_index])
+                        if object_area >= 50 and int(label) not in ignore_classes and object_height >= 8 and object_width >= 8:
                             files.append({'img': img_files[i], 'ann': ann_files[i]})
                             break
     
-    ignore_classes = [2, 25, 31]
     label_map, label_info = object_labels(files, ignore_classes)
     return files, label_map, label_info
 

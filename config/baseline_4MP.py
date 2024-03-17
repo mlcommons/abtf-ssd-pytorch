@@ -30,6 +30,6 @@ model = dict(
 )
 
 dataset = dict(
-    folders = ['10001_Urban_Clear_Noon'],
-    cameras = ['Cognata_Camera_01_8M']
+    folders = ['10001_Urban_Clear_Noon', '10002_Urban_Clear_Morning', '10003_Urban_Clear_Noon', '10004_Urban_Clear_Noon', '10005_Urban_Clear_Noon'],
+    cameras = ['Cognata_Camera_01_8M', 'Cognata_Camera_02_8M', 'Cognata_Camera_03_8M']
 )
