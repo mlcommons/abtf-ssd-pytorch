@@ -61,12 +61,12 @@ class CocoDataset(CocoDetection):
         return image, target[0]["image_id"], (height, width), boxes, labels
 
 class Cognata(Dataset):
-    def __init__(self, label_map, label_info, files, transform=None):
+    def __init__(self, label_map, label_info, files, ignore_classes=[2, 25, 31], transform=None):
         self.label_map = label_map
         self.label_info = label_info
         self.transform = transform
         self.files = files
-        self.ignore_classes = [2, 25, 31]
+        self.ignore_classes = ignore_classes
     def __len__(self):
         return len(self.files)
     
@@ -126,9 +126,8 @@ def object_labels(files, ignore_classes):
                     counter += 1
     return label_map, label_info
 
-def prepare_cognata(root, folders, cameras):
+def prepare_cognata(root, folders, cameras, ignore_classes=[2, 25, 31]):
     files = []
-    ignore_classes = [2, 25, 31]
     for folder in folders:
         for camera in cameras:
             ann_folder = os.path.join(root, folder, camera + '_ann')

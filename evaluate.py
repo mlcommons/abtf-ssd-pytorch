@@ -71,9 +71,12 @@ def main(rank, opt, world_size):
     if opt.dataset == 'Cognata':
         folders = config.dataset['folders']
         cameras = config.dataset['cameras']
-        files, label_map, label_info = prepare_cognata(opt.data_path, folders, cameras)
+        ignore_classes = [2, 25, 31]
+        if 'ignore_classes' in config.dataset:
+            ignore_classes = config.dataset['ignore_classes']
+        files, label_map, label_info = prepare_cognata(opt.data_path, folders, cameras, ignore_classes)
         files = train_val_split(files)
-        test_set = Cognata(label_map, label_info, files['val'], SSDTransformer(dboxes, image_size, val=True))
+        test_set = Cognata(label_map, label_info, files['val'], ignore_classes, SSDTransformer(dboxes, image_size, val=True))
         num_classes = len(label_map.keys())
         print(label_map)
         print(label_info)
