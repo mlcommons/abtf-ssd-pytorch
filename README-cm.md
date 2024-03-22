@@ -49,7 +49,7 @@ cmr "test abtf ssd-resnet50 cognata pytorch" --input=0000008766.png --output=000
 
 Test exported ONNX model with LoadGen (performance):
 ```bash
-cm run script "python app loadgen-generic _onnxruntime" --adr.python.name=abtf --modelpath=baseline_8mp.onnx --samples=1 --quiet
+cm run script "python app loadgen-generic _onnxruntime" --modelpath=baseline_8mp.onnx --samples=1 --quiet
 ```
 
 
