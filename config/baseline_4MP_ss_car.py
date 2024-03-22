@@ -12,8 +12,8 @@ model = dict(
     middle_blocks = [{'kernel_size': (1,3), 'padding': (0,1), 'stride': (1,2)}, 
                     {'kernel_size': (1,3), 'padding': (0,1), 'stride': (1,2)},
                     {'kernel_size': (1,3), 'padding': (0,1), 'stride': (1,2)},
-                    {'kernel_size': (1,3), 'padding': (0,0), 'stride': (1,1)},
-                    {'kernel_size': (1,3), 'padding': (0,0), 'stride': (1,1)}],
+                    {'kernel_size': (1,3), 'padding': (0,1), 'stride': (1,2)},
+                    {'kernel_size': (1,3), 'padding': (0,1), 'stride': (1,2)}],
     head = {'num_defaults': [4, 6, 6, 6, 4, 4],
             'loc': [{'kernel_size': 3, 'padding': 1, 'stride': 1},
                     {'kernel_size': 3, 'padding': 1, 'stride': 1},
@@ -31,8 +31,7 @@ model = dict(
 )
 
 dataset = dict(
-    folders = ['10001_Urban_Clear_Noon', '10002_Urban_Clear_Morning', '10003_Urban_Clear_Noon', '10004_Urban_Clear_Noon', '10005_Urban_Clear_Noon',
-               '10009_Urban_Rain_Morning', '10011_Urban_Rain_Evening', '10012_Urban_Rain_Evening'],
+    folders = ['10001_Urban_Clear_Noon', '10002_Urban_Clear_Morning', '10003_Urban_Clear_Noon', '10004_Urban_Clear_Noon', '10005_Urban_Clear_Noon'],
     cameras = ['Cognata_Camera_01_8M', 'Cognata_Camera_02_8M', 'Cognata_Camera_03_8M'],
     ignore_classes = [2, 9, 10, 11, 13, 14, 25, 28, 29, 31, 33, 35, 36, 44, 46, 48]
 )
