@@ -49,12 +49,14 @@ cmr "test abtf ssd-resnet50 cognata pytorch" --input=0000008766.png --output=000
 
 Test exported ONNX model with LoadGen (performance):
 ```bash
-cm run script "python app loadgen-generic _onnxruntime" --adr.python.name=abtf --modelpath=baseline_8mp.onnx --samples=10 --quiet
+cm run script "python app loadgen-generic _onnxruntime" --adr.python.name=abtf --modelpath=baseline_8mp.onnx --samples=1 --quiet
 ```
 
 
+Test different versions of PyTorch
 ```bash
-cmr "test abtf ssd-pytorch _cognata" --adr.python.name=abtf --adr.torch.version=1.13.1 --adr.torchvision.version=0.14.1 --input=road.jpg --output=road_ssd.jpg
+cmr "install python-venv" --name=abtf2
+cmr "test abtf ssd-resnet50 cognata pytorch" --adr.python.name=abtf2 --adr.torch.version=1.13.1 --adr.torchvision.version=0.14.1 --input=0000008766.png --output=0000008766_prediction_test.jpg --config=baseline_8MP
 ```
 
 ## TBD
