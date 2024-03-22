@@ -28,16 +28,31 @@ class Base(nn.Module):
 
 
 class ResNet(nn.Module):
-    def __init__(self):
+    def __init__(self, model_config):
         super().__init__()
         backbone = resnet50(pretrained=True)
         self.out_channels = [1024, 512, 512, 256, 256, 256]
         self.feature_extractor = nn.Sequential(*list(backbone.children())[:7])
-
-        conv4_block1 = self.feature_extractor[-1][0]
-        conv4_block1.conv1.stride = (1, 1)
-        conv4_block1.conv2.stride = (1, 1)
-        conv4_block1.downsample[0].stride = (1, 1)
+        for block in model_config['backbone']:
+            if block['block_no'] == 0:
+                conv_layer = self.feature_extractor[block['block_no']]
+                conv_layer.kernel_size = block['conv']['kernel_size']
+                conv_layer.stride = block['conv']['stride']
+                conv_layer.padding = block['conv']['padding']
+            else:
+                conv_block = self.feature_extractor[block['block_no']][block['layer']]
+                for conv in block['conv']:
+                    for k, v in conv.items():
+                        conv_layer = getattr(conv_block, 'conv' + str(k))
+                        conv_layer.kernel_size = v['kernel_size']
+                        conv_layer.stride = v['stride']
+                        conv_layer.padding = v['padding']
+            if 'downsample' in block and block['downsample'] is not None:
+                conv_block.downsample[0].stride = block['downsample']['stride']
+        #conv4_block1 = self.feature_extractor[-1][0]
+        #conv4_block1.conv1.stride = (1, 1)
+        #conv4_block1.conv2.stride = (1, 1)
+        #conv4_block1.downsample[0].stride = (1, 1)
 
     def forward(self, x):
         x = self.feature_extractor(x)
@@ -45,46 +60,50 @@ class ResNet(nn.Module):
 
 
 class SSD(Base):
-    def __init__(self, backbone=ResNet(), num_classes=81):
+    def __init__(self, model_config, backbone, num_classes=81):
         super().__init__()
 
         self.feature_extractor = backbone
         self.num_classes = num_classes
+        self.config = model_config
+        self.pre_blocks = None
+        if 'pre_backbone' in self.config and self.config['pre_backbone']:
+            self.pre_backbone([3, 3, 3], [3, 3, 3], self.config['pre_backbone'])
         self._build_additional_features(self.feature_extractor.out_channels)
-        self.num_defaults = [4, 6, 6, 6, 4, 4]
+        self.num_defaults = self.config['head']['num_defaults']
         self.loc = []
         self.conf = []
 
-        for nd, oc in zip(self.num_defaults, self.feature_extractor.out_channels):
-            self.loc.append(nn.Conv2d(oc, nd * 4, kernel_size=3, padding=1))
-            self.conf.append(nn.Conv2d(oc, nd * self.num_classes, kernel_size=3, padding=1))
+        for nd, oc, loc_config, conf_config in zip(self.num_defaults, self.feature_extractor.out_channels, self.config['head']['loc'], self.config['head']['conf']):
+            self.loc.append(nn.Conv2d(oc, nd * 4, kernel_size=loc_config['kernel_size'], stride=conf_config['stride'], padding=loc_config['padding']))
+            self.conf.append(nn.Conv2d(oc, nd * self.num_classes, kernel_size=conf_config['kernel_size'], stride=conf_config['stride'], padding=conf_config['padding']))
 
         self.loc = nn.ModuleList(self.loc)
         self.conf = nn.ModuleList(self.conf)
         self.init_weights()
 
+    def pre_backbone(self, input_channels, output_channels, pre_layers):
+        self.pre_blocks = []
+        blocks = []
+        for i, conv in enumerate(pre_layers):
+            blocks.append(nn.Conv2d(input_channels[i], output_channels[i], conv['kernel_size'], conv['stride'], conv['padding']))
+            blocks.append(nn.BatchNorm2d(output_channels[i]))
+            blocks.append(nn.ReLU(inplace=True))
+        self.pre_blocks = nn.Sequential(*blocks)
+    
     def _build_additional_features(self, input_size):
         self.additional_blocks = []
         for i, (input_size, output_size, channels) in enumerate(
                 zip(input_size[:-1], input_size[1:], [256, 256, 128, 128, 128])):
-            if i < 3:
-                layer = nn.Sequential(
-                    nn.Conv2d(input_size, channels, kernel_size=1, bias=False),
-                    nn.BatchNorm2d(channels),
-                    nn.ReLU(inplace=True),
-                    nn.Conv2d(channels, output_size, kernel_size=3, padding=1, stride=2, bias=False),
-                    nn.BatchNorm2d(output_size),
-                    nn.ReLU(inplace=True),
-                )
-            else:
-                layer = nn.Sequential(
-                    nn.Conv2d(input_size, channels, kernel_size=1, bias=False),
-                    nn.BatchNorm2d(channels),
-                    nn.ReLU(inplace=True),
-                    nn.Conv2d(channels, output_size, kernel_size=3, bias=False),
-                    nn.BatchNorm2d(output_size),
-                    nn.ReLU(inplace=True),
-                )
+            middle_block = self.config['middle_blocks'][i]
+            layer = nn.Sequential(
+                nn.Conv2d(input_size, channels, kernel_size=middle_block['kernel_size'][0], padding=middle_block['padding'][0], stride=middle_block['stride'][0], bias=False),
+                nn.BatchNorm2d(channels),
+                nn.ReLU(inplace=True),
+                nn.Conv2d(channels, output_size, kernel_size=middle_block['kernel_size'][1], padding=middle_block['padding'][1], stride=middle_block['stride'][1], bias=False),
+                nn.BatchNorm2d(output_size),
+                nn.ReLU(inplace=True),
+            )
 
             self.additional_blocks.append(layer)
 
@@ -92,6 +111,8 @@ class SSD(Base):
 
 
     def forward(self, x):
+        if self.pre_blocks is not None:
+            x = self.pre_blocks(x)
         x = self.feature_extractor(x)
         detection_feed = [x]
         for l in self.additional_blocks:

@@ -5,43 +5,58 @@
 import os
 import numpy as np
 import argparse
+import importlib
 import torch
-from src.dataset import CocoDataset
+from src.dataset import CocoDataset, Cognata, prepare_cognata, train_val_split
 from src.transform import SSDTransformer
 import cv2
 import shutil
 
-from src.utils import generate_dboxes, Encoder, colors
+from src.utils import generate_dboxes, Encoder, colors, coco_classes
 from src.model import SSD, ResNet
 
 
 def get_args():
     parser = argparse.ArgumentParser("Implementation of SSD")
-    parser.add_argument("--data-path", type=str, default="/coco", help="the root folder of dataset")
+    parser.add_argument("--data-path", type=str, default="/cognata", help="the root folder of dataset")
     parser.add_argument("--cls-threshold", type=float, default=0.5)
     parser.add_argument("--nms-threshold", type=float, default=0.5)
     parser.add_argument("--pretrained-model", type=str, default="trained_models/SSD.pth")
     parser.add_argument("--output", type=str, default="predictions")
+    parser.add_argument("--dataset", default='Cognata', type=str)
+    parser.add_argument("--config", default='config', type=str)
     args = parser.parse_args()
     return args
 
 
 def test(opt):
-    model = SSD(backbone=ResNet())
+    config = importlib.import_module('config.' + opt.config)
+    image_size = config.model['image_size']
+    dboxes = generate_dboxes(config.model, model="ssd")
+    if opt.dataset == 'Cognata':
+        folders = config.dataset['folders']
+        cameras = config.dataset['cameras']
+        files, label_map, label_info = prepare_cognata(opt.data_path, folders, cameras)
+        files = train_val_split(files)
+        test_set = Cognata(label_map, label_info, files['val'], SSDTransformer(dboxes, image_size, val=True))
+        num_classes = len(label_map.keys())
+        print(label_map)
+        print(label_info)
+    else:
+        test_set = CocoDataset(opt.data_path, 2017, "val", SSDTransformer(dboxes, image_size, val=False))
+        num_classes = len(coco_classes)
+    encoder = Encoder(dboxes)
+    model = SSD(config.model, backbone=ResNet(config.model), num_classes=num_classes)
     checkpoint = torch.load(opt.pretrained_model)
     model.load_state_dict(checkpoint["model_state_dict"])
     if torch.cuda.is_available():
         model.cuda()
     model.eval()
-    dboxes = generate_dboxes()
-    test_set = CocoDataset(opt.data_path, 2017, "val", SSDTransformer(dboxes, (300, 300), val=True))
-    encoder = Encoder(dboxes)
-
     if os.path.isdir(opt.output):
         shutil.rmtree(opt.output)
     os.makedirs(opt.output)
 
-    for img, img_id, img_size, _, _ in test_set:
+    for img, img_id, img_size, _, _, *other in test_set:
         if img is None:
             continue
         if torch.cuda.is_available():
@@ -55,8 +70,14 @@ def test(opt):
             label = label[best]
             prob = prob[best]
             if len(loc) > 0:
-                path = test_set.coco.loadImgs(img_id)[0]["file_name"]
-                output_img = cv2.imread(os.path.join(opt.data_path, "val2017", path))
+                if opt.dataset == 'Cognata':
+                    path = files['val'][img_id]['img']
+                    output_img = cv2.imread(path)
+                    output_path = os.path.basename(path)[:-4]
+                else:
+                    path = test_set.coco.loadImgs(img_id)[0]["file_name"]
+                    output_img = cv2.imread(os.path.join(opt.data_path, "val2017", path))
+                    output_path = path[:-4]
                 height, width, _ = output_img.shape
                 loc[:, 0::2] *= width
                 loc[:, 1::2] *= height
@@ -73,7 +94,8 @@ def test(opt):
                         output_img, category + " : %.2f" % pr,
                         (xmin, ymin + text_size[1] + 4), cv2.FONT_HERSHEY_PLAIN, 1,
                         (255, 255, 255), 1)
-                    cv2.imwrite("{}/{}_prediction.jpg".format(opt.output, path[:-4]), output_img)
+                    
+                    cv2.imwrite("{}/{}_prediction.jpg".format(opt.output, output_path), output_img)
 
 
 if __name__ == "__main__":
