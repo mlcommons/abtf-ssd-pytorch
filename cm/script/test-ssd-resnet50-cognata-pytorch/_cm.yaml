@@ -20,9 +20,11 @@ input_mapping:
   output: CM_OUTPUT_IMAGE
   export_model: CM_ABTF_EXPORT_MODEL_TO_ONNX
   config: CM_ABTF_ML_MODEL_CONFIG
+  dataset: CM_ABTF_DATASET
 
 default_env:
   CM_ABTF_ML_MODEL_CONFIG: baseline_8MP
+  CM_ABTF_DATASET: Cognata
 
 deps:
 
@@ -52,7 +54,7 @@ deps:
   - abtf-ssd-pytorch-git-repo
   env:
     CM_GIT_CHECKOUT_PATH_ENV_NAME: CM_ABTF_SSD_PYTORCH
-    CM_GIT_BRANCH: cognata
+    CM_GIT_BRANCH: cognata-cm
   extra_cache_tags: abtf,ssd,pytorch
 
 
