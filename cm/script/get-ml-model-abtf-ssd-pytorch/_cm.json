@@ -1,5 +1,5 @@
 {
-  "alias": "get-ml-model-abtf-ssd-coco-pytorch",
+  "alias": "get-ml-model-abtf-ssd-pytorch",
   "automation_alias": "script",
   "automation_uid": "5b4e0237da074764",
   "private": true,
@@ -38,8 +38,7 @@
   "tags": [
     "get",
     "ml-model",
-    "abtf-ssd-pytorch",
-    "abtf-ssd-coco-pytorch"
+    "abtf-ssd-pytorch"
   ],
   "uid": "59cfc2a22f5d4f46",
   "variations": {

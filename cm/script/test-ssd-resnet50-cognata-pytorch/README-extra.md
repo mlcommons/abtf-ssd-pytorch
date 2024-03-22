@@ -21,12 +21,9 @@ Install python virtual environment to avoid messing up your original Python:
 cmr "install python-venv" --name=abtf
 ```
 
-Download road.jpg to your current directory:
-```bash
-cmr "download file _wget" --url=https://cKnowledge.org/ai/data/road.jpg --verify=no --md5sum=470ba3b9a2f9ae21ed7a03e2680108a5
-```
+Download private test image `0000008766.png` and model `baseline_8mp.pth` to your local directory.
 
-Import current local model `baseline_8mp.pth`:
+Import `baseline_8mp.pth` to CM:
 ```bash
 cmr "get ml-model abtf-ssd-pytorch _local.baseline_8mp.pth"
 ```
@@ -36,10 +33,14 @@ Get git repo
 cmr "get git repo _repo.https://github.com/mlcommons/abtf-ssd-pytorch" --env.CM_GIT_BRANCH=cognata --extra_cache_tags=abtf,ssd,pytorch --env.CM_GIT_CHECKOUT_PATH_ENV_NAME=CM_ABTF_SSD_PYTORCH
 ```
 
-Test pre-trained model (add road.jpg or any other file to your current directory):
+Test pre-trained model: 
 ```bash
-cmr "test abtf ssd-pytorch _cognata" --input=road.jpg --output=road_ssd.jpg
+cmr "test abtf ssd-resnet50 cognata pytorch" --adr.python.name=abtf --input=0000008766.png --output=0000008766_prediction_test.jpg
 ```
+
+
+
+
 
 # Export PyTorch model to ONNX
 
