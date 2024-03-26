@@ -156,7 +156,7 @@ def main(rank, opt, world_size):
                       "model_state_dict": model.module.state_dict(),
                       "optimizer": optimizer.state_dict(),
                       "scheduler": scheduler.state_dict()}
-        if (rank == 0) and (epoch%opt.checkpoint_freq == 0):
+        if (rank == 0) and ((epoch+1)%opt.checkpoint_freq == 0):
             torch.save(checkpoint, checkpoint_path + '_ep' + str(epoch+1) + '.pth')
         torch.distributed.barrier()
     cleanup()
