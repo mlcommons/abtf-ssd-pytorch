@@ -83,6 +83,7 @@ class Cognata(Dataset):
             annotations = rows[1:]
             bbox_index = header.index('bounding_box_2D')
             class_index = header.index('object_class')
+            distance_index = header.index('center_distance')
             for annotation in annotations:
                 bbox = annotation[bbox_index]
                 bbox = ast.literal_eval(bbox)
@@ -90,7 +91,8 @@ class Cognata(Dataset):
                 object_height = bbox[3]-bbox[1]
                 object_area = object_width*object_height
                 label = ast.literal_eval(annotation[class_index])
-                if object_area < 50 or int(label) in self.ignore_classes or object_height < 8 or object_width < 8:
+                distance = ast.literal_eval(annotation[distance_index])
+                if object_area < 50 or int(label) in self.ignore_classes or object_height < 8 or object_width < 8 or distance > 300:
                     continue
                 boxes.append([bbox[0] / width, bbox[1] / height, bbox[2] / width, bbox[3] / height])
                 label = self.label_map[label]
@@ -142,6 +144,7 @@ def prepare_cognata(root, folders, cameras, ignore_classes=[2, 25, 31]):
                     annotations = rows[1:]
                     bbox_index = header.index('bounding_box_2D')
                     class_index = header.index('object_class')
+                    distance_index = header.index('center_distance')
                     for annotation in annotations:
                         bbox = annotation[bbox_index]
                         bbox = ast.literal_eval(bbox)
@@ -149,7 +152,8 @@ def prepare_cognata(root, folders, cameras, ignore_classes=[2, 25, 31]):
                         object_height = bbox[3]-bbox[1]
                         object_area = object_width*object_height
                         label = ast.literal_eval(annotation[class_index])
-                        if object_area >= 50 and int(label) not in ignore_classes and object_height >= 8 and object_width >= 8:
+                        distance = ast.literal_eval(annotation[distance_index])
+                        if object_area >= 50 and int(label) not in ignore_classes and object_height >= 8 and object_width >= 8 and distance <= 300:
                             files.append({'img': img_files[i], 'ann': ann_files[i]})
                             break
     
