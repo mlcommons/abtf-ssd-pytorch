@@ -33,7 +33,10 @@ class ResNet(nn.Module):
     def __init__(self, model_config):
         super().__init__()
         backbone = resnet50(pretrained=True)
-        self.out_channels = [1024, 512, 512, 256, 256, 256]
+        if 'feature_out_channels' in model_config:
+            self.out_channels = model_config['feature_out_channels']
+        else:
+            self.out_channels = [1024, 512, 512, 256, 256, 256]
         self.feature_extractor = nn.Sequential(*list(backbone.children())[:7])
         for block in model_config['backbone']:
             if block['block_no'] == 0:
@@ -71,7 +74,11 @@ class SSD(Base):
         self.pre_blocks = None
         if 'pre_backbone' in self.config and self.config['pre_backbone']:
             self.pre_backbone([3, 3, 3], [3, 3, 3], self.config['pre_backbone'])
-        self._build_additional_features(self.feature_extractor.out_channels)
+        if 'feature_in_channels' in model_config:
+            in_channels = model_config['feature_out_channels']
+        else:
+            in_channels = [256, 256, 128, 128, 128]
+        self._build_additional_features(self.feature_extractor.out_channels, in_channels)
         self.num_defaults = self.config['head']['num_defaults']
         self.loc = []
         self.conf = []
@@ -93,10 +100,10 @@ class SSD(Base):
             blocks.append(nn.ReLU(inplace=True))
         self.pre_blocks = nn.Sequential(*blocks)
     
-    def _build_additional_features(self, input_size):
+    def _build_additional_features(self, input_size, output_size):
         self.additional_blocks = []
         for i, (input_size, output_size, channels) in enumerate(
-                zip(input_size[:-1], input_size[1:], [256, 256, 128, 128, 128])):
+                zip(input_size[:-1], input_size[1:], output_size)):
             middle_block = self.config['middle_blocks'][i]
             layer = nn.Sequential(
                 nn.Conv2d(input_size, channels, kernel_size=middle_block['kernel_size'][0], padding=middle_block['padding'][0], stride=middle_block['stride'][0], bias=False),
