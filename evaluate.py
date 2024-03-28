@@ -4,6 +4,8 @@
 import os
 import shutil
 import importlib
+import pprint
+import csv
 from argparse import ArgumentParser
 
 import torch
@@ -51,6 +53,10 @@ def get_args():
     parser.add_argument("--dataset", default='Cognata', type=str)
     parser.add_argument("--config", default='config', type=str)
     parser.add_argument("--pretrained-model", type=str, default="trained_models/SSD.pth")
+    parser.add_argument("--checkpoint-freq", type=int, default=1)
+    parser.add_argument("--epochs", type=int, default=65, help="number of total epochs model was trained for evaluation")
+    parser.add_argument("--full-eval", action='store_true', help="Evaluate several checkpoints of a model")
+
     
     args = parser.parse_args()
     return args
@@ -104,14 +110,32 @@ def main(rank, opt, world_size):
         model = model.to(rank)
         model = DDP(model, device_ids=[rank], output_device=rank)
 
-    writer = SummaryWriter(opt.log_path)
-
-    checkpoint = torch.load(opt.pretrained_model)
-    epoch = checkpoint["epoch"] + 1
-    model.module.load_state_dict(checkpoint["model_state_dict"])
     if opt.dataset == 'Cognata':
-        cognata_eval(model, test_loader, epoch, writer, encoder, opt.nms_threshold)
+        if opt.full_eval:
+            file_path= os.path.join(opt.log_path, opt.config + '_results.csv')
+            
+            with open(file_path, 'a+', newline='') as csvfile:
+                fieldnames = [label_info[key] for key in sorted(label_info.keys())]
+                fieldnames = ['epoch'] + fieldnames[1:]
+                writer = csv.writer(csvfile)
+                writer.writerow(fieldnames)
+                for i in range(opt.checkpoint_freq, opt.epochs+1, opt.checkpoint_freq):
+                    checkpoint = torch.load(opt.pretrained_model + '_ep' + str(i) + '.pth')
+                    epoch = checkpoint["epoch"] + 1
+                    model.module.load_state_dict(checkpoint["model_state_dict"])
+                    metrics = cognata_eval(model, test_loader, epoch, writer, encoder, opt.nms_threshold)
+                    writer.writerow([epoch] + metrics['map_per_class'].tolist())
+        else:
+            checkpoint = torch.load(opt.pretrained_model)
+            epoch = checkpoint["epoch"] + 1
+            model.module.load_state_dict(checkpoint["model_state_dict"])
+            metrics = cognata_eval(model, test_loader, epoch, writer, encoder, opt.nms_threshold)
+            pp = pprint.PrettyPrinter(indent=4)
+            pp.pprint(metrics)
     else:
+        checkpoint = torch.load(opt.pretrained_model)
+        epoch = checkpoint["epoch"] + 1
+        model.module.load_state_dict(checkpoint["model_state_dict"])
         evaluate(model, test_loader, epoch, writer, encoder, opt.nms_threshold)
     cleanup()
 

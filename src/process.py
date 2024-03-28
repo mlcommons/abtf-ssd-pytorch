@@ -7,7 +7,6 @@ import torch
 from pycocotools.cocoeval import COCOeval
 from apex import amp
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
-import pprint
 
 def train(model, train_loader, epoch, writer, criterion, optimizer, scheduler, is_amp):
     model.train()
@@ -116,8 +115,7 @@ def cognata_eval(model, test_loader, epoch, writer, encoder, nms_threshold):
                 targets.append({'boxes': gt_boxes[idx][:,:4].to(device='cuda'), 'labels': gt_boxes[idx][:, 4].to(device='cuda') })
     metric = MeanAveragePrecision(iou_type="bbox", class_metrics=True)
     metric.update(preds, targets)
-    pp = pprint.PrettyPrinter(indent=4)
-    pp.pprint(metric.compute())
+    return metric.compute()
     '''
     print('start ap')
     all_preds = [None]*torch.distributed.get_world_size()
