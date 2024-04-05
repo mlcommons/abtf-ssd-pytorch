@@ -12,7 +12,6 @@ def train(model, train_loader, epoch, writer, criterion, optimizer, scheduler, i
     model.train()
     num_iter_per_epoch = len(train_loader)
     progress_bar = tqdm(train_loader)
-    scheduler.step()
     for i, (img, _, _, gloc, glabel, *other) in enumerate(progress_bar):
         if torch.cuda.is_available():
             img = img.cuda()
@@ -35,6 +34,7 @@ def train(model, train_loader, epoch, writer, criterion, optimizer, scheduler, i
             loss.backward()
         optimizer.step()
         optimizer.zero_grad()
+    scheduler.step()
 
 def evaluate(model, test_loader, epoch, writer, encoder, nms_threshold):
     model.eval()
