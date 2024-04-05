@@ -109,7 +109,7 @@ def main(rank, opt, world_size):
         # to do multi-GPU training, even if there is only a single node.
         model = model.to(rank)
         model = DDP(model, device_ids=[rank], output_device=rank)
-
+    writer = SummaryWriter(opt.log_path)
     if opt.dataset == 'Cognata':
         if opt.full_eval:
             file_path= os.path.join(opt.log_path, opt.config + '_results.csv')
