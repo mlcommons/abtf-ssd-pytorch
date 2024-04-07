@@ -158,7 +158,7 @@ class Encoder(object):
             return [torch.tensor([]) for _ in range(3)]
 
         bboxes_out, labels_out, scores_out = torch.cat(bboxes_out, dim=0), \
-                                             torch.tensor(labels_out, dtype=torch.long), \
+                                             torch.tensor(labels_out, dtype=torch.long, device=bboxes_in.device), \
                                              torch.cat(scores_out, dim=0)
 
         _, max_ids = scores_out.sort(dim=0)

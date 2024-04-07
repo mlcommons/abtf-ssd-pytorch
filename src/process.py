@@ -109,11 +109,11 @@ def cognata_eval(model, test_loader, epoch, writer, encoder, nms_threshold):
                     scores.append(prob_)
                 
                 dts = torch.tensor(dts, device='cuda')
-                labels = torch.tensor(labels, device='cuda')
+                labels = torch.tensor(labels, device='cuda', dtype=torch.int32)
                 scores = torch.tensor(scores, device='cuda')
                 preds.append({'boxes': dts, 'labels': labels, 'scores': scores})
-                targets.append({'boxes': gt_boxes[idx][:,:4].to(device='cuda'), 'labels': gt_boxes[idx][:, 4].to(device='cuda') })
-    metric = MeanAveragePrecision(iou_type="bbox", class_metrics=True)
+                targets.append({'boxes': gt_boxes[idx][:,:4].to(device='cuda'), 'labels': gt_boxes[idx][:, 4].to(device='cuda', dtype=torch.int32) })
+    metric = MeanAveragePrecision(iou_type="bbox", class_metrics=True, backend='faster_coco_eval')
     metric.update(preds, targets)
     return metric.compute()
     '''
