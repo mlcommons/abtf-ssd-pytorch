@@ -23,6 +23,7 @@ def get_args():
     parser.add_argument("--output", type=str, default=None, help="the path to output image")
     parser.add_argument("--dataset", default='Cognata', type=str)
     parser.add_argument("--config", default='config', type=str)
+    parser.add_argument("--num-classes", type=int, default=16)
     args = parser.parse_args()
     return args
 
@@ -42,7 +43,7 @@ def test(opt):
     image_size = config.model['image_size']
 
 #    model = SSD(backbone=ResNet())
-    model = SSD(config.model, backbone=ResNet(config.model), num_classes=16) #num_classes)
+    model = SSD(config.model, backbone=ResNet(config.model), num_classes=opt.num_classes)
 #    checkpoint = torch.load(opt.pretrained_model)
     checkpoint = torch.load(opt.pretrained_model, map_location=torch.device(device))
     model.load_state_dict(checkpoint["model_state_dict"])
