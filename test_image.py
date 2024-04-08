@@ -67,7 +67,7 @@ def test(opt):
         # Save in pickle format for MLPerf loadgen tests
         # https://github.com/mlcommons/ck/tree/dev/cm-mlops/script/app-loadgen-generic-python
 
-        input_pickle_file = opt.input+'.pickle'
+        input_pickle_file = opt.input+'.'+device+'.pickle'
         import pickle
         with open(input_pickle_file, 'wb') as handle:
             pickle.dump(inp, handle)
