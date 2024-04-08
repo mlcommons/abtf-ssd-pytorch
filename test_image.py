@@ -57,14 +57,36 @@ def test(opt):
     img, _, _, _ = transformer(img, None, torch.zeros(1,4), torch.zeros(1))
     encoder = Encoder(dboxes)
 
+
     if torch.cuda.is_available():
         img = img.cuda()
     with torch.no_grad():
         inp = img.unsqueeze(dim=0)
+
+        ###################################################################
+        # Save in pickle format for MLPerf loadgen tests
+        # https://github.com/mlcommons/ck/tree/dev/cm-mlops/script/app-loadgen-generic-python
+
+        input_pickle_file = opt.input+'.pickle'
+        import pickle
+        with open(input_pickle_file, 'wb') as handle:
+            pickle.dump(inp, handle)
+
+        print ('')
+        print ('Recording input image tensor to pickle: {}'.format(input_pickle_file))
+        print ('  Input type: {}'.format(type(inp)))
+        print ('  Input shape: {}'.format(inp.shape))
+
+        print ('')
+        print ('Running inference ...')
+
         ploc, plabel = model(inp)
         result = encoder.decode_batch(ploc, plabel, opt.nms_threshold, 20)[0]
 
         if to_export_model!='' and not exported:
+            print ('')
+            print ('Exporting PyTorch model to ONNX format ...')
+
             torch.onnx.export(model,
                  inp,
                  to_export_model,
