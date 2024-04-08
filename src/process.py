@@ -8,7 +8,7 @@ from pycocotools.cocoeval import COCOeval
 from apex import amp
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
 
-def train(model, train_loader, epoch, writer, criterion, optimizer, scheduler, is_amp):
+def train(model, train_loader, epoch, criterion, optimizer, scheduler, is_amp):
     model.train()
     num_iter_per_epoch = len(train_loader)
     progress_bar = tqdm(train_loader)
@@ -25,7 +25,6 @@ def train(model, train_loader, epoch, writer, criterion, optimizer, scheduler, i
 
         progress_bar.set_description("Epoch: {}. Loss: {:.5f}".format(epoch + 1, loss.item()))
 
-        writer.add_scalar("Train/Loss", loss.item(), epoch * num_iter_per_epoch + i)
 
         if is_amp:
             with amp.scale_loss(loss, optimizer) as scale_loss:

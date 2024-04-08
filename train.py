@@ -9,7 +9,6 @@ from argparse import ArgumentParser
 import torch
 from torch.optim.lr_scheduler import MultiStepLR
 from torch.utils.data import DataLoader
-from torch.utils.tensorboard import SummaryWriter
 
 from src.model import SSD, SSDLite, ResNet, MobileNetV2
 from src.utils import generate_dboxes, Encoder, coco_classes
@@ -139,7 +138,6 @@ def main(rank, opt, world_size):
             os.makedirs(opt.save_folder)
     checkpoint_path = os.path.join(opt.save_folder, opt.save_name)
 
-    writer = SummaryWriter(opt.log_path)
 
     if os.path.isfile(opt.pretrained_model):
         checkpoint = torch.load(opt.pretrained_model)
@@ -151,7 +149,7 @@ def main(rank, opt, world_size):
         first_epoch = 0
 
     for epoch in range(first_epoch, opt.epochs):
-        train(model, train_loader, epoch, writer, criterion, optimizer, scheduler, opt.amp)
+        train(model, train_loader, epoch, criterion, optimizer, scheduler, opt.amp)
         checkpoint = {"epoch": epoch,
                       "model_state_dict": model.module.state_dict(),
                       "optimizer": optimizer.state_dict(),
