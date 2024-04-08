@@ -1,5 +1,5 @@
 """
-CM interface for ABTF model
+CM interface for ABTF model to plug to MLPerf loadgen
 
 Developer: Grigori Fursin
 """
