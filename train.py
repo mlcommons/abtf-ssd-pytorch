@@ -105,7 +105,7 @@ def main(rank, opt, world_size):
 
     encoder = Encoder(dboxes)
 
-    opt.lr = opt.lr * (opt.batch_size / 32)
+    opt.lr = opt.lr * world_size * (opt.batch_size / 32)
     criterion = Loss(dboxes)
 
     optimizer = torch.optim.SGD(model.parameters(), lr=opt.lr, momentum=opt.momentum,
