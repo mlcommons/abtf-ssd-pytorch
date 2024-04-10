@@ -29,4 +29,4 @@ def model_init(checkpoint, cfg):
 
     model.load_state_dict(checkpoint[checkpoint_key])
 
-    return model
+    return {'return':0, 'model':model}
