@@ -1,5 +1,6 @@
 """
-CM interface for ABTF model to plug to MLPerf loadgen
+Collective Mind Connector for the ABTF model 
+to plug it to the CM workflow with MLPerf loadgen
 
 Developer: Grigori Fursin
 """
