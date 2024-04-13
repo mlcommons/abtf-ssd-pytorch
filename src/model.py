@@ -32,7 +32,8 @@ class Base(nn.Module):
 class ResNet(nn.Module):
     def __init__(self, model_config):
         super().__init__()
-        backbone = resnet50(pretrained=True)
+        # Grigori removed pretrained since we don't need it for ABTF
+        backbone = resnet50(pretrained=False)
         if 'feature_out_channels' in model_config:
             self.out_channels = model_config['feature_out_channels']
         else:
@@ -137,7 +138,8 @@ feature_maps = {}
 class MobileNetV2(nn.Module):
     def __init__(self):
         super().__init__()
-        self.feature_extractor = mobilenet_v2(pretrained=True).features
+        # Grigori removed pretrained since we don't need it for ABTF
+        self.feature_extractor = mobilenet_v2(pretrained=False).features
         self.feature_extractor[14].conv[0][2].register_forward_hook(self.get_activation())
 
     def get_activation(self):
