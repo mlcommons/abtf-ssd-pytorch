@@ -29,14 +29,16 @@ Some differences are the addition of the flags `dataset`, `config`, and `save-na
 
 If you are training from a checkpoint, add the `--pretrained-model` flag along the the path to the checkpoint.
 
+# Evaluation
 To evaluate a trained model
 
 `torchrun --nproc_per_node=1 evaluate.py --model ssd --batch-size 1 --dataset Cognata --data-path /cognata --pretrained-model [model path] --config test_8MP`
 > [!Note]
 > Evaluation only works with 1 gpu.
 
-To test on the dataset
-`python test_dataset.py --pretrained-model [path/to/trained_model] --dataset Cognata --data-path /cognata --config test_8MP`
+# Test on data
+To test on the dataset using the 1.0 checkpoint
+`python test_dataset.py --pretrained-model [path/to/trained_model] --dataset Cognata --data-path /cognata --config baseline_8MP_ss_scales_test`
 
 # Config file
 
