@@ -11,6 +11,7 @@ from src.dataset import CocoDataset, Cognata, prepare_cognata, train_val_split
 from src.transform import SSDTransformer
 import cv2
 import shutil
+import cognata_labels
 
 from src.utils import generate_dboxes, Encoder, colors, coco_classes
 from src.model import SSD, ResNet
@@ -36,9 +37,13 @@ def test(opt):
     if opt.dataset == 'Cognata':
         folders = config.dataset['folders']
         cameras = config.dataset['cameras']
+        ignore_classes = [2, 25, 31]
         files, label_map, label_info = prepare_cognata(opt.data_path, folders, cameras)
-        files = train_val_split(files)
-        test_set = Cognata(label_map, label_info, files['val'], SSDTransformer(dboxes, image_size, val=True))
+        #files = train_val_split(files)
+        if 'use_label_info' in config.dataset and config.dataset['use_label_info']:
+            label_map = cognata_labels.label_map
+            label_info = cognata_labels.label_info
+        test_set = Cognata(label_map, label_info, files, ignore_classes, SSDTransformer(dboxes, image_size, val=True))
         num_classes = len(label_map.keys())
         print(label_map)
         print(label_info)
@@ -63,7 +68,7 @@ def test(opt):
             img = img.cuda()
         with torch.no_grad():
             ploc, plabel = model(img.unsqueeze(dim=0))
-            result = encoder.decode_batch(ploc, plabel, opt.nms_threshold, 20)[0]
+            result = encoder.decode_batch(ploc, plabel, opt.nms_threshold, 100)[0]
             loc, label, prob = [r.cpu().numpy() for r in result]
             best = np.argwhere(prob > opt.cls_threshold).squeeze(axis=1)
             loc = loc[best]
@@ -71,7 +76,7 @@ def test(opt):
             prob = prob[best]
             if len(loc) > 0:
                 if opt.dataset == 'Cognata':
-                    path = files['val'][img_id]['img']
+                    path = files[img_id]['img']
                     output_img = cv2.imread(path)
                     output_path = os.path.basename(path)[:-4]
                 else:
