@@ -13,21 +13,8 @@ from PIL import Image
 from src.utils import generate_dboxes, Encoder, colors, coco_classes
 from src.model import SSD, ResNet
 
-cognata_classes = [
-  'background',
-  'Traffic_light',
-  'Props',
-  'TrafficSign',
-  'Car',
-  'Van',
-  'Rider',
-  'Motorcycle',
-  'Bicycle',
-  'Pedestrian',
-  'Truck',
-  'PersonalMobility',
-  'Bus' 
-  ]
+# Cognata labels
+import cognata_labels
 
 def get_args():
     parser = argparse.ArgumentParser("Implementation of SSD")
@@ -128,8 +115,7 @@ def test(opt):
             loc[:, 1::2] *= height
             loc = loc.astype(np.int32)
             for box, lb, pr in zip(loc, label, prob):
-#                category = test_set.label_info[lb]
-                category = cognata_classes[lb]
+                category = cognata_labels.label_info[lb]
                 color = colors[lb]
                 xmin, ymin, xmax, ymax = box
                 cv2.rectangle(output_img, (xmin, ymin), (xmax, ymax), color, 2)
