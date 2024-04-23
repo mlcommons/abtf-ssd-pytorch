@@ -2,6 +2,9 @@
 @author: Viet Nguyen <nhviet1009@gmail.com>
 """
 
+print ('Initializing ...')
+print ('')
+
 import numpy as np
 import argparse
 import importlib
@@ -13,6 +16,8 @@ from PIL import Image
 from src.utils import generate_dboxes, Encoder, colors, coco_classes
 from src.model import SSD, ResNet
 
+# Cognata labels
+import cognata_labels
 
 def get_args():
     parser = argparse.ArgumentParser("Implementation of SSD")
@@ -23,6 +28,7 @@ def get_args():
     parser.add_argument("--output", type=str, default=None, help="the path to output image")
     parser.add_argument("--dataset", default='Cognata', type=str)
     parser.add_argument("--config", default='config', type=str)
+    parser.add_argument("--num-classes", type=int)
     args = parser.parse_args()
     return args
 
@@ -41,15 +47,21 @@ def test(opt):
     config = importlib.import_module('config.' + opt.config)
     image_size = config.model['image_size']
 
-#    model = SSD(backbone=ResNet())
-    model = SSD(config.model, backbone=ResNet(config.model), num_classes=16) #num_classes)
-#    checkpoint = torch.load(opt.pretrained_model)
+    # Some older ABTF models may have different number of classes.
+    # In such cases, we can force the number via command line
+    num_classes = opt.num_classes
+    if num_classes is None:
+        num_classes = len(cognata_labels.label_info)
+
+    print ('')
+    print ('Number of classes for the model: {}'.format(num_classes))
+
+    model = SSD(config.model, backbone=ResNet(config.model), num_classes=num_classes)
     checkpoint = torch.load(opt.pretrained_model, map_location=torch.device(device))
     model.load_state_dict(checkpoint["model_state_dict"])
     if device=='cuda':
         model.cuda()
     model.eval()
-#    dboxes = generate_dboxes()
     dboxes = generate_dboxes(config.model, model="ssd")
 
     transformer = SSDTransformer(dboxes, image_size, val=True)
@@ -57,14 +69,40 @@ def test(opt):
     img, _, _, _ = transformer(img, None, torch.zeros(1,4), torch.zeros(1))
     encoder = Encoder(dboxes)
 
+
     if torch.cuda.is_available():
         img = img.cuda()
     with torch.no_grad():
         inp = img.unsqueeze(dim=0)
-        ploc, plabel = model(inp)
-        result = encoder.decode_batch(ploc, plabel, opt.nms_threshold, 20)[0]
 
+        ###################################################################
+        # Save in pickle format for MLPerf loadgen tests
+        # https://github.com/mlcommons/ck/tree/dev/cm-mlops/script/app-loadgen-generic-python
+
+        input_pickle_file = opt.input+'.'+device+'.pickle'
+        import pickle
+        with open(input_pickle_file, 'wb') as handle:
+            pickle.dump(inp, handle)
+
+        print ('')
+        print ('Recording input image tensor to pickle: {}'.format(input_pickle_file))
+        print ('  Input type: {}'.format(type(inp)))
+        print ('  Input shape: {}'.format(inp.shape))
+
+        print ('')
+        print ('Running ABTF model ...')
+
+        import time
+        t1 = time.time()
+        
+        ploc, plabel = model(inp)
+                
+        result = encoder.decode_batch(ploc, plabel, opt.nms_threshold, 20)[0]
+        
         if to_export_model!='' and not exported:
+            print ('')
+            print ('Exporting PyTorch model to ONNX format ...')
+
             torch.onnx.export(model,
                  inp,
                  to_export_model,
@@ -76,7 +114,11 @@ def test(opt):
 
             exported = True     
         
-        
+        t = time.time() - t1
+
+        print ('')
+        print ('Elapsed time: {:0.2f} sec.'.format(t))
+                
         loc, label, prob = [r.cpu().numpy() for r in result]
         best = np.argwhere(prob > opt.cls_threshold).squeeze(axis=1)
         loc = loc[best]
@@ -89,8 +131,7 @@ def test(opt):
             loc[:, 1::2] *= height
             loc = loc.astype(np.int32)
             for box, lb, pr in zip(loc, label, prob):
-#                category = test_set.label_info[lb]
-                category = coco_classes[lb]
+                category = cognata_labels.label_info[lb]
                 color = colors[lb]
                 xmin, ymin, xmax, ymax = box
                 cv2.rectangle(output_img, (xmin, ymin), (xmax, ymax), color, 2)
@@ -105,6 +146,9 @@ def test(opt):
             output = "{}_prediction.jpg".format(opt.input[:-4])
         else:
             output = opt.output
+
+        print ('')
+        print ('Recording output image with detect objects: {}'.format(output))
         cv2.imwrite(output, output_img)
 
 
