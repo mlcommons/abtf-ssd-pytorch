@@ -30,10 +30,10 @@ class Base(nn.Module):
 
 
 class ResNet(nn.Module):
-    def __init__(self, model_config):
+    def __init__(self, model_config, pretrained=False):
         super().__init__()
         # Grigori removed pretrained since we don't need it for ABTF
-        backbone = resnet50(pretrained=False)
+        backbone = resnet50(pretrained=pretrained)
         if 'feature_out_channels' in model_config:
             self.out_channels = model_config['feature_out_channels']
         else:
