@@ -96,11 +96,11 @@ def test(opt):
                     xmin, ymin, xmax, ymax = box
                     cv2.rectangle(output_img, (xmin, ymin), (xmax, ymax), color, int(opt.box_thickness))
                     text_size = cv2.getTextSize(category + " : %.2f" % pr, cv2.FONT_HERSHEY_PLAIN, 1, 1)[0]
-                    cv2.rectangle(output_img, (xmin, ymin), (xmin + text_size[0]*opt.text_size, ymin + text_size[1]*(opt.text_size + 1)), color,
+                    cv2.rectangle(output_img, (xmin, ymin-(text_size[1]*(opt.text_size + 1))), (xmin + text_size[0]*opt.text_size, ymin), color,
                                   -1)
                     cv2.putText(
                         output_img, category + " : %.2f" % pr,
-                        (xmin, ymin + text_size[1]*(opt.text_size + 1)), cv2.FONT_HERSHEY_PLAIN, opt.text_size,
+                        (xmin, ymin), cv2.FONT_HERSHEY_PLAIN, opt.text_size,
                         (255, 255, 255), opt.text_size)
                     
                     cv2.imwrite("{}/{}_prediction.jpg".format(opt.output, output_path), output_img)
