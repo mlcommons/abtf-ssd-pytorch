@@ -26,6 +26,9 @@ def get_args():
     parser.add_argument("--output", type=str, default="predictions")
     parser.add_argument("--dataset", default='Cognata', type=str)
     parser.add_argument("--config", default='config', type=str)
+    parser.add_argument("--box-thickness", type=int, default=2)
+    parser.add_argument("--text-size", type=int, default=2)
+    parser.add_argument("--max-boxes", type=int, default=100)
     args = parser.parse_args()
     return args
 
@@ -68,7 +71,7 @@ def test(opt):
             img = img.cuda()
         with torch.no_grad():
             ploc, plabel = model(img.unsqueeze(dim=0))
-            result = encoder.decode_batch(ploc, plabel, opt.nms_threshold, 100)[0]
+            result = encoder.decode_batch(ploc, plabel, opt.nms_threshold, opt.max_boxes)[0]
             loc, label, prob = [r.cpu().numpy() for r in result]
             best = np.argwhere(prob > opt.cls_threshold).squeeze(axis=1)
             loc = loc[best]
@@ -91,14 +94,14 @@ def test(opt):
                     category = test_set.label_info[lb]
                     color = colors[lb]
                     xmin, ymin, xmax, ymax = box
-                    cv2.rectangle(output_img, (xmin, ymin), (xmax, ymax), color, 2)
+                    cv2.rectangle(output_img, (xmin, ymin), (xmax, ymax), color, int(opt.box_thickness))
                     text_size = cv2.getTextSize(category + " : %.2f" % pr, cv2.FONT_HERSHEY_PLAIN, 1, 1)[0]
-                    cv2.rectangle(output_img, (xmin, ymin), (xmin + text_size[0] + 3, ymin + text_size[1] + 4), color,
+                    cv2.rectangle(output_img, (xmin, ymin), (xmin + text_size[0]*opt.text_size, ymin + text_size[1]*(opt.text_size + 1)), color,
                                   -1)
                     cv2.putText(
                         output_img, category + " : %.2f" % pr,
-                        (xmin, ymin + text_size[1] + 4), cv2.FONT_HERSHEY_PLAIN, 1,
-                        (255, 255, 255), 1)
+                        (xmin, ymin + text_size[1]*(opt.text_size + 1)), cv2.FONT_HERSHEY_PLAIN, opt.text_size,
+                        (255, 255, 255), opt.text_size)
                     
                     cv2.imwrite("{}/{}_prediction.jpg".format(opt.output, output_path), output_img)
 
