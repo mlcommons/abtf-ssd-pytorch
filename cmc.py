@@ -1,4 +1,6 @@
 """
+Copyright 2024 MLCommons Association and Contributors
+
 Collective Mind Connector for the ABTF model 
 to plug it to the CM workflow with MLPerf loadgen
 

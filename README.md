@@ -135,7 +135,7 @@ Forward/backward pass size (MB): 177580.85
 Params size (MB): 56.24
 Estimated Total Size (MB): 178035.22
 ```
-# License
+# Acknowledgements
 
-This repo modifies [SSD-Pytorch](https://github.com/uvipen/SSD-pytorch) which was released under an MIT license, [copy of license](https://github.com/mlcommons/abtf-ssd-pytorch/blob/cognata/LICENSE). Our modified codebase is released under an [Apache 2.0 license](https://github.com/mlcommons/abtf-ssd-pytorch/blob/cognata/LICENSE.md)
+This repo modifies [SSD-Pytorch](https://github.com/uvipen/SSD-pytorch).
 

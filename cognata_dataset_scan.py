@@ -1,3 +1,7 @@
+'''
+Copyright 2024 MLCommons Association and Contributors
+'''
+
 import os
 import csv
 import ast

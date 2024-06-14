@@ -1,3 +1,6 @@
+'''
+Copyright 2024 MLCommons Association and Contributors
+'''
 import os
 import shutil
 import importlib
