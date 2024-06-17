@@ -4,7 +4,7 @@
 
 ## Setup
 
-you will need to download the Cognata dataset. Follow instruction for the EULA at the [MLCommons Cognata webiste](https://mlcommons.org/datasets/cognata/). After signing the EULA you can download the dataset manually or using scripts on our [WIP repo](https://github.com/mlcommons/abtf-wip/tree/cognata/cognata).
+You will need to download the Cognata dataset. Follow instruction for the EULA at the [MLCommons Cognata webiste](https://mlcommons.org/datasets/cognata/). After signing the EULA you can download the dataset manually or using scripts on our [WIP repo](https://github.com/mlcommons/abtf-wip/tree/cognata/cognata).
 
 > [!Note]
 > We currently have the dataset on an MLCommons Google Drive. When the process for managing access for that is complete, then you won't have to download the dataset from the Cognata servers (which is slow). Until then you can use the scrips to make downloading the dataset more convenient.
