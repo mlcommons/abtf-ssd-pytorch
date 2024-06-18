@@ -1,9 +1,36 @@
 """
-@author: Viet Nguyen <nhviet1009@gmail.com>
+Modifications by MLCommons from SSD-Pytorch (https://github.com/uvipen/SSD-pytorch) author: Viet Nguyen (nhviet1009@gmail.com)
+Copyright 2024 MLCommons Association and Contributors
+
+MIT License
+
+Copyright (c) 2021 Viet Nguyen
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 """
+
+print ('Initializing ...')
+print ('')
 
 import numpy as np
 import argparse
+import importlib
 import torch
 from src.transform import SSDTransformer
 import cv2
@@ -12,6 +39,8 @@ from PIL import Image
 from src.utils import generate_dboxes, Encoder, colors, coco_classes
 from src.model import SSD, ResNet
 
+# Cognata labels
+import cognata_labels
 
 def get_args():
     parser = argparse.ArgumentParser("Implementation of SSD")
@@ -20,28 +49,99 @@ def get_args():
     parser.add_argument("--nms-threshold", type=float, default=0.5)
     parser.add_argument("--pretrained-model", type=str, default="trained_models/SSD.pth")
     parser.add_argument("--output", type=str, default=None, help="the path to output image")
+    parser.add_argument("--dataset", default='Cognata', type=str)
+    parser.add_argument("--config", default='config', type=str)
+    parser.add_argument("--num-classes", type=int)
     args = parser.parse_args()
     return args
 
 
 def test(opt):
-    model = SSD(backbone=ResNet())
-    checkpoint = torch.load(opt.pretrained_model)
+    import os
+    device = os.environ.get('CM_DEVICE','')
+    if device == 'cuda' and not torch.cuda.is_available():
+        print ('')
+        print ('Error: CUDA is forced but not available...')
+        exit(1)
+
+    to_export_model = os.environ.get('CM_ABTF_EXPORT_MODEL_TO_ONNX','')
+    exported = False
+
+    config = importlib.import_module('config.' + opt.config)
+    image_size = config.model['image_size']
+
+    # Some older ABTF models may have different number of classes.
+    # In such cases, we can force the number via command line
+    num_classes = opt.num_classes
+    if num_classes is None:
+        num_classes = len(cognata_labels.label_info)
+
+    print ('')
+    print ('Number of classes for the model: {}'.format(num_classes))
+
+    model = SSD(config.model, backbone=ResNet(config.model), num_classes=num_classes)
+    checkpoint = torch.load(opt.pretrained_model, map_location=torch.device(device))
     model.load_state_dict(checkpoint["model_state_dict"])
-    if torch.cuda.is_available():
+    if device=='cuda':
         model.cuda()
     model.eval()
-    dboxes = generate_dboxes()
-    transformer = SSDTransformer(dboxes, (300, 300), val=True)
+    dboxes = generate_dboxes(config.model, model="ssd")
+
+    transformer = SSDTransformer(dboxes, image_size, val=True)
     img = Image.open(opt.input).convert("RGB")
     img, _, _, _ = transformer(img, None, torch.zeros(1,4), torch.zeros(1))
     encoder = Encoder(dboxes)
 
+
     if torch.cuda.is_available():
         img = img.cuda()
     with torch.no_grad():
-        ploc, plabel = model(img.unsqueeze(dim=0))
+        inp = img.unsqueeze(dim=0)
+
+        ###################################################################
+        # Save in pickle format for MLPerf loadgen tests
+        # https://github.com/mlcommons/ck/tree/dev/cm-mlops/script/app-loadgen-generic-python
+
+        input_pickle_file = opt.input+'.'+device+'.pickle'
+        import pickle
+        with open(input_pickle_file, 'wb') as handle:
+            pickle.dump(inp, handle)
+
+        print ('')
+        print ('Recording input image tensor to pickle: {}'.format(input_pickle_file))
+        print ('  Input type: {}'.format(type(inp)))
+        print ('  Input shape: {}'.format(inp.shape))
+
+        print ('')
+        print ('Running ABTF model ...')
+
+        import time
+        t1 = time.time()
+        
+        ploc, plabel = model(inp)
+                
         result = encoder.decode_batch(ploc, plabel, opt.nms_threshold, 20)[0]
+        
+        if to_export_model!='' and not exported:
+            print ('')
+            print ('Exporting PyTorch model to ONNX format ...')
+
+            torch.onnx.export(model,
+                 inp,
+                 to_export_model,
+                 verbose=True,
+                 input_names=['input'],
+                 output_names=['output'],
+                 export_params=True,
+                 )
+
+            exported = True     
+        
+        t = time.time() - t1
+
+        print ('')
+        print ('Elapsed time: {:0.2f} sec.'.format(t))
+                
         loc, label, prob = [r.cpu().numpy() for r in result]
         best = np.argwhere(prob > opt.cls_threshold).squeeze(axis=1)
         loc = loc[best]
@@ -54,7 +154,7 @@ def test(opt):
             loc[:, 1::2] *= height
             loc = loc.astype(np.int32)
             for box, lb, pr in zip(loc, label, prob):
-                category = coco_classes[lb]
+                category = cognata_labels.label_info[lb]
                 color = colors[lb]
                 xmin, ymin, xmax, ymax = box
                 cv2.rectangle(output_img, (xmin, ymin), (xmax, ymax), color, 2)
@@ -69,6 +169,9 @@ def test(opt):
             output = "{}_prediction.jpg".format(opt.input[:-4])
         else:
             output = opt.output
+
+        print ('')
+        print ('Recording output image with detect objects: {}'.format(output))
         cv2.imwrite(output, output_img)
 
 

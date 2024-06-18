@@ -1,5 +1,28 @@
 """
-@author: Viet Nguyen <nhviet1009@gmail.com>
+Modifications by MLCommons from SSD-Pytorch (https://github.com/uvipen/SSD-pytorch) author: Viet Nguyen (nhviet1009@gmail.com)
+Copyright 2024 MLCommons Association and Contributors
+
+MIT License
+
+Copyright (c) 2021 Viet Nguyen
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 """
 import numpy as np
 import itertools
@@ -158,7 +181,7 @@ class Encoder(object):
             return [torch.tensor([]) for _ in range(3)]
 
         bboxes_out, labels_out, scores_out = torch.cat(bboxes_out, dim=0), \
-                                             torch.tensor(labels_out, dtype=torch.long), \
+                                             torch.tensor(labels_out, dtype=torch.long, device=bboxes_in.device), \
                                              torch.cat(scores_out, dim=0)
 
         _, max_ids = scores_out.sort(dim=0)
@@ -178,24 +201,23 @@ class DefaultBoxes(object):
         self.steps = steps
         self.scales = scales
 
-        fk = fig_size / np.array(steps)
+        #fk = fig_size / np.array(steps)
         self.aspect_ratios = aspect_ratios
 
         self.default_boxes = []
         for idx, sfeat in enumerate(self.feat_size):
 
-            sk1 = scales[idx] / fig_size
-            sk2 = scales[idx + 1] / fig_size
+            sk1 = scales[idx]
+            sk2 = scales[idx + 1]
             sk3 = sqrt(sk1 * sk2)
-            all_sizes = [(sk1, sk1), (sk3, sk3)]
+            all_sizes = [(sk1/fig_size[1], sk1/fig_size[0]), (sk3/fig_size[1], sk3/fig_size[0])]
 
             for alpha in aspect_ratios[idx]:
-                w, h = sk1 * sqrt(alpha), sk1 / sqrt(alpha)
+                w, h = sk1 * sqrt(alpha)/fig_size[1], sk1 / (sqrt(alpha)*fig_size[0])
                 all_sizes.append((w, h))
-                all_sizes.append((h, w))
             for w, h in all_sizes:
-                for i, j in itertools.product(range(sfeat), repeat=2):
-                    cx, cy = (j + 0.5) / fk[idx], (i + 0.5) / fk[idx]
+                for i, j in itertools.product(range(sfeat[0]), range(sfeat[1])):
+                    cx, cy = (j + 0.5)*steps[idx] / fig_size[1], (i + 0.5)*steps[idx] / fig_size[0]
                     self.default_boxes.append((cx, cy, w, h))
 
         self.dboxes = torch.tensor(self.default_boxes, dtype=torch.float)
@@ -209,13 +231,13 @@ class DefaultBoxes(object):
             return self.dboxes
 
 
-def generate_dboxes(model="ssd"):
+def generate_dboxes(config, model="ssd"):
     if model == "ssd":
-        figsize = 300
-        feat_size = [38, 19, 10, 5, 3, 1]
-        steps = [8, 16, 32, 64, 100, 300]
-        scales = [21, 45, 99, 153, 207, 261, 315]
-        aspect_ratios = [[2], [2, 3], [2, 3], [2, 3], [2], [2]]
+        figsize = config['image_size']
+        feat_size = config['feat_size']
+        steps = config['steps']
+        scales = config['scales']
+        aspect_ratios = config['aspect_ratios']
         dboxes = DefaultBoxes(figsize, feat_size, steps, scales, aspect_ratios)
     else:  # "ssdlite"
         figsize = 300
